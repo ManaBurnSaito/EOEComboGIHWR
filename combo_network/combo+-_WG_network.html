@@ -1,0 +1,460 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Banishing Light">Banishing Light</option>
+                                
+                                    <option value="All-Fates Stalker">All-Fates Stalker</option>
+                                
+                                    <option value="Brightspear Zealot">Brightspear Zealot</option>
+                                
+                                    <option value="Dockworker Drone">Dockworker Drone</option>
+                                
+                                    <option value="Focus Fire">Focus Fire</option>
+                                
+                                    <option value="Honored Knight-Captain">Honored Knight-Captain</option>
+                                
+                                    <option value="Knight Luminary">Knight Luminary</option>
+                                
+                                    <option value="Rayblade Trooper">Rayblade Trooper</option>
+                                
+                                    <option value="Reroute Systems">Reroute Systems</option>
+                                
+                                    <option value="Rescue Skiff">Rescue Skiff</option>
+                                
+                                    <option value="Sunstar Lightsmith">Sunstar Lightsmith</option>
+                                
+                                    <option value="Biosynthic Burst">Biosynthic Burst</option>
+                                
+                                    <option value="Diplomatic Relations">Diplomatic Relations</option>
+                                
+                                    <option value="Intrepid Tenderfoot">Intrepid Tenderfoot</option>
+                                
+                                    <option value="Larval Scoutlander">Larval Scoutlander</option>
+                                
+                                    <option value="Meltstrider Eulogist">Meltstrider Eulogist</option>
+                                
+                                    <option value="Haliya, Ascendant Cadet">Haliya, Ascendant Cadet</option>
+                                
+                                    <option value="Flight-Deck Coordinator">Flight-Deck Coordinator</option>
+                                
+                                    <option value="Auxiliary Boosters">Auxiliary Boosters</option>
+                                
+                                    <option value="Blooming Stinger">Blooming Stinger</option>
+                                
+                                    <option value="Edge Rover">Edge Rover</option>
+                                
+                                    <option value="Meltstrider's Resolve">Meltstrider's Resolve</option>
+                                
+                                    <option value="Thawbringer">Thawbringer</option>
+                                
+                                    <option value="Starfield Shepherd">Starfield Shepherd</option>
+                                
+                                    <option value="Sunstar Expansionist">Sunstar Expansionist</option>
+                                
+                                    <option value="Galactic Wayfarer">Galactic Wayfarer</option>
+                                
+                                    <option value="Harmonious Grovestrider">Harmonious Grovestrider</option>
+                                
+                                    <option value="Hemosymbic Mite">Hemosymbic Mite</option>
+                                
+                                    <option value="Squire's Lightblade">Squire's Lightblade</option>
+                                
+                                    <option value="Emergency Eject">Emergency Eject</option>
+                                
+                                    <option value="Dawnstrike Vanguard">Dawnstrike Vanguard</option>
+                                
+                                    <option value="Gene Pollinator">Gene Pollinator</option>
+                                
+                                    <option value="Dual-Sun Adepts">Dual-Sun Adepts</option>
+                                
+                                    <option value="Dual-Sun Technique">Dual-Sun Technique</option>
+                                
+                                    <option value="Drix Fatemaker">Drix Fatemaker</option>
+                                
+                                    <option value="Honor">Honor</option>
+                                
+                                    <option value="Wedgelight Rammer">Wedgelight Rammer</option>
+                                
+                                    <option value="Lashwhip Predator">Lashwhip Predator</option>
+                                
+                                    <option value="Starport Security">Starport Security</option>
+                                
+                                    <option value="Glacier Godmaw">Glacier Godmaw</option>
+                                
+                                    <option value="Seedship Impact">Seedship Impact</option>
+                                
+                                    <option value="Luxknight Breacher">Luxknight Breacher</option>
+                                
+                                    <option value="Radiant Strike">Radiant Strike</option>
+                                
+                                    <option value="Broodguard Elite">Broodguard Elite</option>
+                                
+                                    <option value="Eumidian Terrabotanist">Eumidian Terrabotanist</option>
+                                
+                                    <option value="Close Encounter">Close Encounter</option>
+                                
+                                    <option value="Seam Rip">Seam Rip</option>
+                                
+                                    <option value="Germinating Wurm">Germinating Wurm</option>
+                                
+                                    <option value="Seedship Agrarian">Seedship Agrarian</option>
+                                
+                                    <option value="Eusocial Engineering">Eusocial Engineering</option>
+                                
+                                    <option value="Tapestry Warden">Tapestry Warden</option>
+                                
+                                    <option value="Sami's Curiosity">Sami's Curiosity</option>
+                                
+                                    <option value="Shattered Wings">Shattered Wings</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Banishing Light", "image": "img/Banishing_Light.png", "label": "Banishing Light", "shape": "image", "title": "GIHWR:58.2, avg_pick:3.94", "url": "WG_combo_network_Banishing_Light"}, {"color": "#97c2fc", "id": "All-Fates Stalker", "image": "img/All-Fates_Stalker.png", "label": "All-Fates Stalker", "shape": "image", "title": "GIHWR:59.8, avg_pick:2.96", "url": "WG_combo_network_All-Fates_Stalker"}, {"color": "#97c2fc", "id": "Brightspear Zealot", "image": "img/Brightspear_Zealot.png", "label": "Brightspear Zealot", "shape": "image", "title": "GIHWR:53.3, avg_pick:10.32", "url": "WG_combo_network_Brightspear_Zealot"}, {"color": "#97c2fc", "id": "Dockworker Drone", "image": "img/Dockworker_Drone.png", "label": "Dockworker Drone", "shape": "image", "title": "GIHWR:54.4, avg_pick:7.12", "url": "WG_combo_network_Dockworker_Drone"}, {"color": "#97c2fc", "id": "Focus Fire", "image": "img/Focus_Fire.png", "label": "Focus Fire", "shape": "image", "title": "GIHWR:57.0, avg_pick:6.55", "url": "WG_combo_network_Focus_Fire"}, {"color": "#97c2fc", "id": "Honored Knight-Captain", "image": "img/Honored_Knight-Captain.png", "label": "Honored Knight-Captain", "shape": "image", "title": "GIHWR:56.3, avg_pick:5.08", "url": "WG_combo_network_Honored_Knight-Captain"}, {"color": "#97c2fc", "id": "Knight Luminary", "image": "img/Knight_Luminary.png", "label": "Knight Luminary", "shape": "image", "title": "GIHWR:57.5, avg_pick:6.05", "url": "WG_combo_network_Knight_Luminary"}, {"color": "#97c2fc", "id": "Rayblade Trooper", "image": "img/Rayblade_Trooper.png", "label": "Rayblade Trooper", "shape": "image", "title": "GIHWR:58.5, avg_pick:3.47", "url": "WG_combo_network_Rayblade_Trooper"}, {"color": "#97c2fc", "id": "Reroute Systems", "image": "img/Reroute_Systems.png", "label": "Reroute Systems", "shape": "image", "title": "GIHWR:52.3, avg_pick:6.95", "url": "WG_combo_network_Reroute_Systems"}, {"color": "#97c2fc", "id": "Rescue Skiff", "image": "img/Rescue_Skiff.png", "label": "Rescue Skiff", "shape": "image", "title": "GIHWR:53.1, avg_pick:6.0", "url": "WG_combo_network_Rescue_Skiff"}, {"color": "#97c2fc", "id": "Sunstar Lightsmith", "image": "img/Sunstar_Lightsmith.png", "label": "Sunstar Lightsmith", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.09", "url": "WG_combo_network_Sunstar_Lightsmith"}, {"color": "#97c2fc", "id": "Biosynthic Burst", "image": "img/Biosynthic_Burst.png", "label": "Biosynthic Burst", "shape": "image", "title": "GIHWR:57.0, avg_pick:7.8", "url": "WG_combo_network_Biosynthic_Burst"}, {"color": "#97c2fc", "id": "Diplomatic Relations", "image": "img/Diplomatic_Relations.png", "label": "Diplomatic Relations", "shape": "image", "title": "GIHWR:56.8, avg_pick:5.24", "url": "WG_combo_network_Diplomatic_Relations"}, {"color": "#97c2fc", "id": "Intrepid Tenderfoot", "image": "img/Intrepid_Tenderfoot.png", "label": "Intrepid Tenderfoot", "shape": "image", "title": "GIHWR:54.4, avg_pick:8.13", "url": "WG_combo_network_Intrepid_Tenderfoot"}, {"color": "#97c2fc", "id": "Larval Scoutlander", "image": "img/Larval_Scoutlander.png", "label": "Larval Scoutlander", "shape": "image", "title": "GIHWR:59.0, avg_pick:3.1", "url": "WG_combo_network_Larval_Scoutlander"}, {"color": "#97c2fc", "id": "Meltstrider Eulogist", "image": "img/Meltstrider_Eulogist.png", "label": "Meltstrider Eulogist", "shape": "image", "title": "GIHWR:53.2, avg_pick:6.02", "url": "WG_combo_network_Meltstrider_Eulogist"}, {"color": "#97c2fc", "id": "Haliya, Ascendant Cadet", "image": "img/Haliya,_Ascendant_Cadet.png", "label": "Haliya, Ascendant Cadet", "shape": "image", "title": "GIHWR:55.3, avg_pick:5.45", "url": "WG_combo_network_Haliya,_Ascendant_Cadet"}, {"color": "#97c2fc", "id": "Flight-Deck Coordinator", "image": "img/Flight-Deck_Coordinator.png", "label": "Flight-Deck Coordinator", "shape": "image", "title": "GIHWR:54.1, avg_pick:10.14", "url": "WG_combo_network_Flight-Deck_Coordinator"}, {"color": "#97c2fc", "id": "Auxiliary Boosters", "image": "img/Auxiliary_Boosters.png", "label": "Auxiliary Boosters", "shape": "image", "title": "GIHWR:54.7, avg_pick:8.76", "url": "WG_combo_network_Auxiliary_Boosters"}, {"color": "#97c2fc", "id": "Blooming Stinger", "image": "img/Blooming_Stinger.png", "label": "Blooming Stinger", "shape": "image", "title": "GIHWR:55.4, avg_pick:7.43", "url": "WG_combo_network_Blooming_Stinger"}, {"color": "#97c2fc", "id": "Edge Rover", "image": "img/Edge_Rover.png", "label": "Edge Rover", "shape": "image", "title": "GIHWR:57.2, avg_pick:4.08", "url": "WG_combo_network_Edge_Rover"}, {"color": "#97c2fc", "id": "Meltstrider\u0027s Resolve", "image": "img/Meltstrider\u0027s_Resolve.png", "label": "Meltstrider\u0027s Resolve", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.83", "url": "WG_combo_network_Meltstrider\u0027s_Resolve"}, {"color": "#97c2fc", "id": "Thawbringer", "image": "img/Thawbringer.png", "label": "Thawbringer", "shape": "image", "title": "GIHWR:55.5, avg_pick:8.21", "url": "WG_combo_network_Thawbringer"}, {"color": "#97c2fc", "id": "Starfield Shepherd", "image": "img/Starfield_Shepherd.png", "label": "Starfield Shepherd", "shape": "image", "title": "GIHWR:58.6, avg_pick:3.14", "url": "WG_combo_network_Starfield_Shepherd"}, {"color": "#97c2fc", "id": "Sunstar Expansionist", "image": "img/Sunstar_Expansionist.png", "label": "Sunstar Expansionist", "shape": "image", "title": "GIHWR:57.5, avg_pick:3.78", "url": "WG_combo_network_Sunstar_Expansionist"}, {"color": "#97c2fc", "id": "Galactic Wayfarer", "image": "img/Galactic_Wayfarer.png", "label": "Galactic Wayfarer", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.17", "url": "WG_combo_network_Galactic_Wayfarer"}, {"color": "#97c2fc", "id": "Harmonious Grovestrider", "image": "img/Harmonious_Grovestrider.png", "label": "Harmonious Grovestrider", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.06", "url": "WG_combo_network_Harmonious_Grovestrider"}, {"color": "#97c2fc", "id": "Hemosymbic Mite", "image": "img/Hemosymbic_Mite.png", "label": "Hemosymbic Mite", "shape": "image", "title": "GIHWR:53.8, avg_pick:8.08", "url": "WG_combo_network_Hemosymbic_Mite"}, {"color": "#97c2fc", "id": "Squire\u0027s Lightblade", "image": "img/Squire\u0027s_Lightblade.png", "label": "Squire\u0027s Lightblade", "shape": "image", "title": "GIHWR:53.5, avg_pick:11.03", "url": "WG_combo_network_Squire\u0027s_Lightblade"}, {"color": "#97c2fc", "id": "Emergency Eject", "image": "img/Emergency_Eject.png", "label": "Emergency Eject", "shape": "image", "title": "GIHWR:53.6, avg_pick:5.5", "url": "WG_combo_network_Emergency_Eject"}, {"color": "#97c2fc", "id": "Dawnstrike Vanguard", "image": "img/Dawnstrike_Vanguard.png", "label": "Dawnstrike Vanguard", "shape": "image", "title": "GIHWR:52.3, avg_pick:5.67", "url": "WG_combo_network_Dawnstrike_Vanguard"}, {"color": "#97c2fc", "id": "Gene Pollinator", "image": "img/Gene_Pollinator.png", "label": "Gene Pollinator", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.65", "url": "WG_combo_network_Gene_Pollinator"}, {"color": "#97c2fc", "id": "Dual-Sun Adepts", "image": "img/Dual-Sun_Adepts.png", "label": "Dual-Sun Adepts", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.49", "url": "WG_combo_network_Dual-Sun_Adepts"}, {"color": "#97c2fc", "id": "Dual-Sun Technique", "image": "img/Dual-Sun_Technique.png", "label": "Dual-Sun Technique", "shape": "image", "title": "GIHWR:51.1, avg_pick:8.41", "url": "WG_combo_network_Dual-Sun_Technique"}, {"color": "#97c2fc", "id": "Drix Fatemaker", "image": "img/Drix_Fatemaker.png", "label": "Drix Fatemaker", "shape": "image", "title": "GIHWR:53.8, avg_pick:7.29", "url": "WG_combo_network_Drix_Fatemaker"}, {"color": "#97c2fc", "id": "Honor", "image": "img/Honor.png", "label": "Honor", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.0", "url": "WG_combo_network_Honor"}, {"color": "#97c2fc", "id": "Wedgelight Rammer", "image": "img/Wedgelight_Rammer.png", "label": "Wedgelight Rammer", "shape": "image", "title": "GIHWR:54.2, avg_pick:5.65", "url": "WG_combo_network_Wedgelight_Rammer"}, {"color": "#97c2fc", "id": "Lashwhip Predator", "image": "img/Lashwhip_Predator.png", "label": "Lashwhip Predator", "shape": "image", "title": "GIHWR:54.6, avg_pick:5.08", "url": "WG_combo_network_Lashwhip_Predator"}, {"color": "#97c2fc", "id": "Starport Security", "image": "img/Starport_Security.png", "label": "Starport Security", "shape": "image", "title": "GIHWR:53.7, avg_pick:9.64", "url": "WG_combo_network_Starport_Security"}, {"color": "#97c2fc", "id": "Glacier Godmaw", "image": "img/Glacier_Godmaw.png", "label": "Glacier Godmaw", "shape": "image", "title": "GIHWR:59.6, avg_pick:2.74", "url": "WG_combo_network_Glacier_Godmaw"}, {"color": "#97c2fc", "id": "Seedship Impact", "image": "img/Seedship_Impact.png", "label": "Seedship Impact", "shape": "image", "title": "GIHWR:57.7, avg_pick:5.26", "url": "WG_combo_network_Seedship_Impact"}, {"color": "#97c2fc", "id": "Luxknight Breacher", "image": "img/Luxknight_Breacher.png", "label": "Luxknight Breacher", "shape": "image", "title": "GIHWR:51.7, avg_pick:9.97", "url": "WG_combo_network_Luxknight_Breacher"}, {"color": "#97c2fc", "id": "Radiant Strike", "image": "img/Radiant_Strike.png", "label": "Radiant Strike", "shape": "image", "title": "GIHWR:55.5, avg_pick:7.52", "url": "WG_combo_network_Radiant_Strike"}, {"color": "#97c2fc", "id": "Broodguard Elite", "image": "img/Broodguard_Elite.png", "label": "Broodguard Elite", "shape": "image", "title": "GIHWR:53.0, avg_pick:4.62", "url": "WG_combo_network_Broodguard_Elite"}, {"color": "#97c2fc", "id": "Eumidian Terrabotanist", "image": "img/Eumidian_Terrabotanist.png", "label": "Eumidian Terrabotanist", "shape": "image", "title": "GIHWR:56.5, avg_pick:4.42", "url": "WG_combo_network_Eumidian_Terrabotanist"}, {"color": "#97c2fc", "id": "Close Encounter", "image": "img/Close_Encounter.png", "label": "Close Encounter", "shape": "image", "title": "GIHWR:56.4, avg_pick:4.05", "url": "WG_combo_network_Close_Encounter"}, {"color": "#97c2fc", "id": "Seam Rip", "image": "img/Seam_Rip.png", "label": "Seam Rip", "shape": "image", "title": "GIHWR:54.2, avg_pick:6.94", "url": "WG_combo_network_Seam_Rip"}, {"color": "#97c2fc", "id": "Germinating Wurm", "image": "img/Germinating_Wurm.png", "label": "Germinating Wurm", "shape": "image", "title": "GIHWR:55.8, avg_pick:7.58", "url": "WG_combo_network_Germinating_Wurm"}, {"color": "#97c2fc", "id": "Seedship Agrarian", "image": "img/Seedship_Agrarian.png", "label": "Seedship Agrarian", "shape": "image", "title": "GIHWR:56.8, avg_pick:2.87", "url": "WG_combo_network_Seedship_Agrarian"}, {"color": "#97c2fc", "id": "Eusocial Engineering", "image": "img/Eusocial_Engineering.png", "label": "Eusocial Engineering", "shape": "image", "title": "GIHWR:56.9, avg_pick:3.99", "url": "WG_combo_network_Eusocial_Engineering"}, {"color": "#97c2fc", "id": "Tapestry Warden", "image": "img/Tapestry_Warden.png", "label": "Tapestry Warden", "shape": "image", "title": "GIHWR:53.7, avg_pick:7.32", "url": "WG_combo_network_Tapestry_Warden"}, {"color": "#97c2fc", "id": "Sami\u0027s Curiosity", "image": "img/Sami\u0027s_Curiosity.png", "label": "Sami\u0027s Curiosity", "shape": "image", "title": "GIHWR:53.9, avg_pick:7.25", "url": "WG_combo_network_Sami\u0027s_Curiosity"}, {"color": "#97c2fc", "id": "Shattered Wings", "image": "img/Shattered_Wings.png", "label": "Shattered Wings", "shape": "image", "title": "GIHWR:51.8, avg_pick:10.25", "url": "WG_combo_network_Shattered_Wings"}]);
+                  edges = new vis.DataSet([{"from": "Banishing Light", "label": "3.33", "title": "combo_ct:5355, comboWR:62.33, combo+-:3.33, AB_AveWR:59.0", "to": "All-Fates Stalker", "value": 3.33}, {"from": "Banishing Light", "label": "3.34", "title": "combo_ct:2513, comboWR:59.09, combo+-:3.34, AB_AveWR:55.75", "to": "Brightspear Zealot", "value": 3.34}, {"from": "Banishing Light", "label": "3.97", "title": "combo_ct:11015, comboWR:61.82, combo+-:3.97, AB_AveWR:57.85", "to": "Knight Luminary", "value": 3.97}, {"from": "Banishing Light", "label": "4.6", "title": "combo_ct:5133, comboWR:63.0, combo+-:4.6, AB_AveWR:58.4", "to": "Starfield Shepherd", "value": 4.6}, {"from": "Banishing Light", "label": "3.21", "title": "combo_ct:4854, comboWR:61.06, combo+-:3.21, AB_AveWR:57.85", "to": "Sunstar Expansionist", "value": 3.21}, {"from": "Banishing Light", "label": "4.17", "title": "combo_ct:4996, comboWR:61.57, combo+-:4.17, AB_AveWR:57.4", "to": "Sunstar Lightsmith", "value": 4.17}, {"from": "Banishing Light", "label": "3.69", "title": "combo_ct:1352, comboWR:61.39, combo+-:3.69, AB_AveWR:57.7", "to": "Edge Rover", "value": 3.69}, {"from": "Banishing Light", "label": "3.12", "title": "combo_ct:3526, comboWR:61.37, combo+-:3.12, AB_AveWR:58.25", "to": "Galactic Wayfarer", "value": 3.12}, {"from": "Banishing Light", "label": "3.32", "title": "combo_ct:1288, comboWR:61.57, combo+-:3.32, AB_AveWR:58.25", "to": "Harmonious Grovestrider", "value": 3.32}, {"from": "Banishing Light", "label": "3.76", "title": "combo_ct:753, comboWR:59.76, combo+-:3.76, AB_AveWR:56.0", "to": "Hemosymbic Mite", "value": 3.76}, {"from": "Banishing Light", "label": "3.59", "title": "combo_ct:2578, comboWR:59.89, combo+-:3.59, AB_AveWR:56.3", "to": "Intrepid Tenderfoot", "value": 3.59}, {"from": "Banishing Light", "label": "3.36", "title": "combo_ct:1472, comboWR:61.96, combo+-:3.36, AB_AveWR:58.6", "to": "Larval Scoutlander", "value": 3.36}, {"from": "Banishing Light", "label": "5.11", "title": "combo_ct:1365, comboWR:60.81, combo+-:5.11, AB_AveWR:55.7", "to": "Meltstrider Eulogist", "value": 5.11}, {"from": "Banishing Light", "label": "3.16", "title": "combo_ct:2734, comboWR:59.91, combo+-:3.16, AB_AveWR:56.75", "to": "Haliya, Ascendant Cadet", "value": 3.16}, {"from": "All-Fates Stalker", "label": "3.25", "title": "combo_ct:1286, comboWR:59.8, combo+-:3.25, AB_AveWR:56.55", "to": "Brightspear Zealot", "value": 3.25}, {"from": "All-Fates Stalker", "label": "3.05", "title": "combo_ct:4083, comboWR:60.15, combo+-:3.05, AB_AveWR:57.1", "to": "Dockworker Drone", "value": 3.05}, {"from": "All-Fates Stalker", "label": "3.46", "title": "combo_ct:4853, comboWR:61.86, combo+-:3.46, AB_AveWR:58.4", "to": "Focus Fire", "value": 3.46}, {"from": "All-Fates Stalker", "label": "4.1", "title": "combo_ct:2008, comboWR:62.15, combo+-:4.1, AB_AveWR:58.05", "to": "Honored Knight-Captain", "value": 4.1}, {"from": "All-Fates Stalker", "label": "3.84", "title": "combo_ct:5583, comboWR:62.49, combo+-:3.84, AB_AveWR:58.65", "to": "Knight Luminary", "value": 3.84}, {"from": "All-Fates Stalker", "label": "4.24", "title": "combo_ct:2338, comboWR:63.39, combo+-:4.24, AB_AveWR:59.15", "to": "Rayblade Trooper", "value": 4.24}, {"from": "All-Fates Stalker", "label": "3.29", "title": "combo_ct:1114, comboWR:59.34, combo+-:3.29, AB_AveWR:56.05", "to": "Reroute Systems", "value": 3.29}, {"from": "All-Fates Stalker", "label": "3.77", "title": "combo_ct:1003, comboWR:60.22, combo+-:3.77, AB_AveWR:56.45", "to": "Rescue Skiff", "value": 3.77}, {"from": "All-Fates Stalker", "label": "3.99", "title": "combo_ct:2396, comboWR:62.19, combo+-:3.99, AB_AveWR:58.2", "to": "Sunstar Lightsmith", "value": 3.99}, {"from": "All-Fates Stalker", "label": "3.78", "title": "combo_ct:1309, comboWR:62.18, combo+-:3.78, AB_AveWR:58.4", "to": "Biosynthic Burst", "value": 3.78}, {"from": "All-Fates Stalker", "label": "3.34", "title": "combo_ct:1491, comboWR:61.64, combo+-:3.34, AB_AveWR:58.3", "to": "Diplomatic Relations", "value": 3.34}, {"from": "All-Fates Stalker", "label": "3.17", "title": "combo_ct:1120, comboWR:60.27, combo+-:3.17, AB_AveWR:57.1", "to": "Intrepid Tenderfoot", "value": 3.17}, {"from": "All-Fates Stalker", "label": "6.41", "title": "combo_ct:620, comboWR:65.81, combo+-:6.41, AB_AveWR:59.4", "to": "Larval Scoutlander", "value": 6.41}, {"from": "All-Fates Stalker", "label": "5.46", "title": "combo_ct:510, comboWR:61.96, combo+-:5.46, AB_AveWR:56.5", "to": "Meltstrider Eulogist", "value": 5.46}, {"from": "All-Fates Stalker", "label": "3.22", "title": "combo_ct:1147, comboWR:60.77, combo+-:3.22, AB_AveWR:57.55", "to": "Haliya, Ascendant Cadet", "value": 3.22}, {"from": "Brightspear Zealot", "label": "11.02", "title": "combo_ct:520, comboWR:64.42, combo+-:11.02, AB_AveWR:53.4", "to": "Squire\u0027s Lightblade", "value": 11.02}, {"from": "Dockworker Drone", "label": "3.27", "title": "combo_ct:4454, comboWR:59.72, combo+-:3.27, AB_AveWR:56.45", "to": "Rayblade Trooper", "value": 3.27}, {"from": "Dockworker Drone", "label": "3.07", "title": "combo_ct:2664, comboWR:57.92, combo+-:3.07, AB_AveWR:54.85", "to": "Haliya, Ascendant Cadet", "value": 3.07}, {"from": "Focus Fire", "label": "3.88", "title": "combo_ct:10653, comboWR:61.13, combo+-:3.88, AB_AveWR:57.25", "to": "Knight Luminary", "value": 3.88}, {"from": "Focus Fire", "label": "3.54", "title": "combo_ct:4678, comboWR:61.29, combo+-:3.54, AB_AveWR:57.75", "to": "Rayblade Trooper", "value": 3.54}, {"from": "Focus Fire", "label": "3.82", "title": "combo_ct:2239, comboWR:59.22, combo+-:3.82, AB_AveWR:55.4", "to": "Drix Fatemaker", "value": 3.82}, {"from": "Focus Fire", "label": "5.12", "title": "combo_ct:960, comboWR:63.12, combo+-:5.12, AB_AveWR:58.0", "to": "Larval Scoutlander", "value": 5.12}, {"from": "Focus Fire", "label": "3.48", "title": "combo_ct:641, comboWR:59.28, combo+-:3.48, AB_AveWR:55.8", "to": "Lashwhip Predator", "value": 3.48}, {"from": "Focus Fire", "label": "3.44", "title": "combo_ct:1831, comboWR:59.69, combo+-:3.44, AB_AveWR:56.25", "to": "Thawbringer", "value": 3.44}, {"from": "Honored Knight-Captain", "label": "3.34", "title": "combo_ct:1900, comboWR:59.79, combo+-:3.34, AB_AveWR:56.45", "to": "Sunstar Lightsmith", "value": 3.34}, {"from": "Honored Knight-Captain", "label": "3.06", "title": "combo_ct:834, comboWR:59.71, combo+-:3.06, AB_AveWR:56.65", "to": "Biosynthic Burst", "value": 3.06}, {"from": "Honored Knight-Captain", "label": "4.26", "title": "combo_ct:842, comboWR:60.81, combo+-:4.26, AB_AveWR:56.55", "to": "Diplomatic Relations", "value": 4.26}, {"from": "Honored Knight-Captain", "label": "3.3", "title": "combo_ct:503, comboWR:58.05, combo+-:3.3, AB_AveWR:54.75", "to": "Meltstrider Eulogist", "value": 3.3}, {"from": "Knight Luminary", "label": "5.73", "title": "combo_ct:1117, comboWR:64.28, combo+-:5.73, AB_AveWR:58.55", "to": "Glacier Godmaw", "value": 5.73}, {"from": "Knight Luminary", "label": "3.4", "title": "combo_ct:674, comboWR:59.05, combo+-:3.4, AB_AveWR:55.65", "to": "Hemosymbic Mite", "value": 3.4}, {"from": "Knight Luminary", "label": "3.68", "title": "combo_ct:1027, comboWR:61.93, combo+-:3.68, AB_AveWR:58.25", "to": "Larval Scoutlander", "value": 3.68}, {"from": "Knight Luminary", "label": "4.17", "title": "combo_ct:558, comboWR:60.22, combo+-:4.17, AB_AveWR:56.05", "to": "Lashwhip Predator", "value": 4.17}, {"from": "Knight Luminary", "label": "3.23", "title": "combo_ct:937, comboWR:60.83, combo+-:3.23, AB_AveWR:57.6", "to": "Seedship Impact", "value": 3.23}, {"from": "Rayblade Trooper", "label": "3.23", "title": "combo_ct:741, comboWR:58.03, combo+-:3.23, AB_AveWR:54.8", "to": "Dual-Sun Technique", "value": 3.23}, {"from": "Rayblade Trooper", "label": "3.18", "title": "combo_ct:1878, comboWR:60.28, combo+-:3.18, AB_AveWR:57.1", "to": "Honor", "value": 3.18}, {"from": "Rayblade Trooper", "label": "3.51", "title": "combo_ct:615, comboWR:59.51, combo+-:3.51, AB_AveWR:56.0", "to": "Squire\u0027s Lightblade", "value": 3.51}, {"from": "Rayblade Trooper", "label": "4.34", "title": "combo_ct:1048, comboWR:60.69, combo+-:4.34, AB_AveWR:56.35", "to": "Wedgelight Rammer", "value": 4.34}, {"from": "Rayblade Trooper", "label": "4.51", "title": "combo_ct:1415, comboWR:62.26, combo+-:4.51, AB_AveWR:57.75", "to": "Biosynthic Burst", "value": 4.51}, {"from": "Rayblade Trooper", "label": "4.28", "title": "combo_ct:601, comboWR:61.73, combo+-:4.28, AB_AveWR:57.45", "to": "Close Encounter", "value": 4.28}, {"from": "Rayblade Trooper", "label": "4.46", "title": "combo_ct:1449, comboWR:62.11, combo+-:4.46, AB_AveWR:57.65", "to": "Diplomatic Relations", "value": 4.46}, {"from": "Rayblade Trooper", "label": "3.35", "title": "combo_ct:1321, comboWR:59.5, combo+-:3.35, AB_AveWR:56.15", "to": "Drix Fatemaker", "value": 3.35}, {"from": "Rayblade Trooper", "label": "3.22", "title": "combo_ct:596, comboWR:61.07, combo+-:3.22, AB_AveWR:57.85", "to": "Edge Rover", "value": 3.22}, {"from": "Rayblade Trooper", "label": "5.44", "title": "combo_ct:552, comboWR:64.49, combo+-:5.44, AB_AveWR:59.05", "to": "Glacier Godmaw", "value": 5.44}, {"from": "Rayblade Trooper", "label": "5.64", "title": "combo_ct:686, comboWR:64.29, combo+-:5.64, AB_AveWR:58.65", "to": "Meltstrider\u0027s Resolve", "value": 5.64}, {"from": "Rayblade Trooper", "label": "3.6", "title": "combo_ct:1428, comboWR:60.5, combo+-:3.6, AB_AveWR:56.9", "to": "Haliya, Ascendant Cadet", "value": 3.6}, {"from": "Reroute Systems", "label": "3.44", "title": "combo_ct:1235, comboWR:57.89, combo+-:3.44, AB_AveWR:54.45", "to": "Sunstar Lightsmith", "value": 3.44}, {"from": "Rescue Skiff", "label": "5.35", "title": "combo_ct:678, comboWR:58.7, combo+-:5.35, AB_AveWR:53.35", "to": "Emergency Eject", "value": 5.35}, {"from": "Rescue Skiff", "label": "4.38", "title": "combo_ct:545, comboWR:57.98, combo+-:4.38, AB_AveWR:53.6", "to": "Flight-Deck Coordinator", "value": 4.38}, {"from": "Sunstar Lightsmith", "label": "3.05", "title": "combo_ct:1854, comboWR:59.65, combo+-:3.05, AB_AveWR:56.6", "to": "Dual-Sun Adepts", "value": 3.05}, {"from": "Sunstar Lightsmith", "label": "6.75", "title": "combo_ct:637, comboWR:60.6, combo+-:6.75, AB_AveWR:53.85", "to": "Dual-Sun Technique", "value": 6.75}, {"from": "Sunstar Lightsmith", "label": "3.4", "title": "combo_ct:1171, comboWR:58.5, combo+-:3.4, AB_AveWR:55.1", "to": "Emergency Eject", "value": 3.4}, {"from": "Sunstar Lightsmith", "label": "4.58", "title": "combo_ct:2088, comboWR:60.73, combo+-:4.58, AB_AveWR:56.15", "to": "Honor", "value": 4.58}, {"from": "Sunstar Lightsmith", "label": "3.94", "title": "combo_ct:1205, comboWR:59.34, combo+-:3.94, AB_AveWR:55.4", "to": "Seam Rip", "value": 3.94}, {"from": "Sunstar Lightsmith", "label": "3.85", "title": "combo_ct:2475, comboWR:61.45, combo+-:3.85, AB_AveWR:57.6", "to": "Starfield Shepherd", "value": 3.85}, {"from": "Sunstar Lightsmith", "label": "3.22", "title": "combo_ct:2268, comboWR:60.27, combo+-:3.22, AB_AveWR:57.05", "to": "Sunstar Expansionist", "value": 3.22}, {"from": "Sunstar Lightsmith", "label": "3.92", "title": "combo_ct:1163, comboWR:60.62, combo+-:3.92, AB_AveWR:56.7", "to": "Diplomatic Relations", "value": 3.92}, {"from": "Sunstar Lightsmith", "label": "3.66", "title": "combo_ct:1113, comboWR:60.56, combo+-:3.66, AB_AveWR:56.9", "to": "Gene Pollinator", "value": 3.66}, {"from": "Sunstar Lightsmith", "label": "3.29", "title": "combo_ct:622, comboWR:59.49, combo+-:3.29, AB_AveWR:56.2", "to": "Germinating Wurm", "value": 3.29}, {"from": "Sunstar Lightsmith", "label": "4.63", "title": "combo_ct:913, comboWR:60.13, combo+-:4.63, AB_AveWR:55.5", "to": "Intrepid Tenderfoot", "value": 4.63}, {"from": "Biosynthic Burst", "label": "4.3", "title": "combo_ct:958, comboWR:60.65, combo+-:4.3, AB_AveWR:56.35", "to": "Honor", "value": 4.3}, {"from": "Biosynthic Burst", "label": "4.24", "title": "combo_ct:1233, comboWR:62.04, combo+-:4.24, AB_AveWR:57.8", "to": "Starfield Shepherd", "value": 4.24}, {"from": "Biosynthic Burst", "label": "3.25", "title": "combo_ct:4042, comboWR:61.55, combo+-:3.25, AB_AveWR:58.3", "to": "Glacier Godmaw", "value": 3.25}, {"from": "Biosynthic Burst", "label": "4.13", "title": "combo_ct:4233, comboWR:61.78, combo+-:4.13, AB_AveWR:57.65", "to": "Harmonious Grovestrider", "value": 4.13}, {"from": "Biosynthic Burst", "label": "3.31", "title": "combo_ct:1383, comboWR:58.71, combo+-:3.31, AB_AveWR:55.4", "to": "Hemosymbic Mite", "value": 3.31}, {"from": "Biosynthic Burst", "label": "3.75", "title": "combo_ct:2262, comboWR:59.9, combo+-:3.75, AB_AveWR:56.15", "to": "Haliya, Ascendant Cadet", "value": 3.75}, {"from": "Diplomatic Relations", "label": "4.66", "title": "combo_ct:706, comboWR:59.21, combo+-:4.66, AB_AveWR:54.55", "to": "Dawnstrike Vanguard", "value": 4.66}, {"from": "Diplomatic Relations", "label": "3.04", "title": "combo_ct:14658, comboWR:60.59, combo+-:3.04, AB_AveWR:57.55", "to": "Galactic Wayfarer", "value": 3.04}, {"from": "Diplomatic Relations", "label": "3.47", "title": "combo_ct:6026, comboWR:61.67, combo+-:3.47, AB_AveWR:58.2", "to": "Glacier Godmaw", "value": 3.47}, {"from": "Diplomatic Relations", "label": "3.2", "title": "combo_ct:5710, comboWR:60.75, combo+-:3.2, AB_AveWR:57.55", "to": "Harmonious Grovestrider", "value": 3.2}, {"from": "Diplomatic Relations", "label": "3.7", "title": "combo_ct:5643, comboWR:61.6, combo+-:3.7, AB_AveWR:57.9", "to": "Larval Scoutlander", "value": 3.7}, {"from": "Diplomatic Relations", "label": "3.11", "title": "combo_ct:2451, comboWR:59.16, combo+-:3.11, AB_AveWR:56.05", "to": "Haliya, Ascendant Cadet", "value": 3.11}, {"from": "Intrepid Tenderfoot", "label": "4.44", "title": "combo_ct:571, comboWR:57.79, combo+-:4.44, AB_AveWR:53.35", "to": "Dawnstrike Vanguard", "value": 4.44}, {"from": "Intrepid Tenderfoot", "label": "3.77", "title": "combo_ct:974, comboWR:60.27, combo+-:3.77, AB_AveWR:56.5", "to": "Starfield Shepherd", "value": 3.77}, {"from": "Intrepid Tenderfoot", "label": "4.3", "title": "combo_ct:790, comboWR:60.25, combo+-:4.3, AB_AveWR:55.95", "to": "Sunstar Expansionist", "value": 4.3}, {"from": "Intrepid Tenderfoot", "label": "3.6", "title": "combo_ct:3501, comboWR:60.3, combo+-:3.6, AB_AveWR:56.7", "to": "Larval Scoutlander", "value": 3.6}, {"from": "Intrepid Tenderfoot", "label": "3.09", "title": "combo_ct:3803, comboWR:59.69, combo+-:3.09, AB_AveWR:56.6", "to": "Meltstrider\u0027s Resolve", "value": 3.09}, {"from": "Intrepid Tenderfoot", "label": "3.43", "title": "combo_ct:1877, comboWR:56.53, combo+-:3.43, AB_AveWR:53.1", "to": "Shattered Wings", "value": 3.43}, {"from": "Larval Scoutlander", "label": "5.23", "title": "combo_ct:813, comboWR:62.48, combo+-:5.23, AB_AveWR:57.25", "to": "Radiant Strike", "value": 5.23}, {"from": "Larval Scoutlander", "label": "3.04", "title": "combo_ct:553, comboWR:61.84, combo+-:3.04, AB_AveWR:58.8", "to": "Starfield Shepherd", "value": 3.04}, {"from": "Larval Scoutlander", "label": "5.35", "title": "combo_ct:2463, comboWR:63.05, combo+-:5.35, AB_AveWR:57.7", "to": "Close Encounter", "value": 5.35}, {"from": "Larval Scoutlander", "label": "3.07", "title": "combo_ct:2565, comboWR:60.82, combo+-:3.07, AB_AveWR:57.75", "to": "Eumidian Terrabotanist", "value": 3.07}, {"from": "Larval Scoutlander", "label": "5.26", "title": "combo_ct:2506, comboWR:63.21, combo+-:5.26, AB_AveWR:57.95", "to": "Eusocial Engineering", "value": 5.26}, {"from": "Larval Scoutlander", "label": "3.09", "title": "combo_ct:7015, comboWR:61.74, combo+-:3.09, AB_AveWR:58.65", "to": "Galactic Wayfarer", "value": 3.09}, {"from": "Larval Scoutlander", "label": "4.53", "title": "combo_ct:4833, comboWR:61.93, combo+-:4.53, AB_AveWR:57.4", "to": "Germinating Wurm", "value": 4.53}, {"from": "Larval Scoutlander", "label": "6.19", "title": "combo_ct:2886, comboWR:65.49, combo+-:6.19, AB_AveWR:59.3", "to": "Glacier Godmaw", "value": 6.19}, {"from": "Larval Scoutlander", "label": "5.81", "title": "combo_ct:2839, comboWR:64.46, combo+-:5.81, AB_AveWR:58.65", "to": "Harmonious Grovestrider", "value": 5.81}, {"from": "Larval Scoutlander", "label": "3.69", "title": "combo_ct:1726, comboWR:60.49, combo+-:3.69, AB_AveWR:56.8", "to": "Lashwhip Predator", "value": 3.69}, {"from": "Larval Scoutlander", "label": "3.59", "title": "combo_ct:960, comboWR:59.69, combo+-:3.59, AB_AveWR:56.1", "to": "Meltstrider Eulogist", "value": 3.59}, {"from": "Larval Scoutlander", "label": "4.21", "title": "combo_ct:2543, comboWR:63.11, combo+-:4.21, AB_AveWR:58.9", "to": "Meltstrider\u0027s Resolve", "value": 4.21}, {"from": "Larval Scoutlander", "label": "4.84", "title": "combo_ct:2548, comboWR:63.19, combo+-:4.84, AB_AveWR:58.35", "to": "Seedship Impact", "value": 4.84}, {"from": "Larval Scoutlander", "label": "3.08", "title": "combo_ct:1103, comboWR:58.48, combo+-:3.08, AB_AveWR:55.4", "to": "Shattered Wings", "value": 3.08}, {"from": "Larval Scoutlander", "label": "5.02", "title": "combo_ct:933, comboWR:62.17, combo+-:5.02, AB_AveWR:57.15", "to": "Haliya, Ascendant Cadet", "value": 5.02}, {"from": "Meltstrider Eulogist", "label": "3.26", "title": "combo_ct:603, comboWR:57.71, combo+-:3.26, AB_AveWR:54.45", "to": "Honor", "value": 3.26}, {"from": "Meltstrider Eulogist", "label": "3.9", "title": "combo_ct:616, comboWR:59.25, combo+-:3.9, AB_AveWR:55.35", "to": "Sunstar Expansionist", "value": 3.9}, {"from": "Meltstrider Eulogist", "label": "3.21", "title": "combo_ct:2756, comboWR:56.71, combo+-:3.21, AB_AveWR:53.5", "to": "Drix Fatemaker", "value": 3.21}, {"from": "Meltstrider Eulogist", "label": "3.38", "title": "combo_ct:1089, comboWR:59.78, combo+-:3.38, AB_AveWR:56.4", "to": "Glacier Godmaw", "value": 3.38}, {"from": "Meltstrider Eulogist", "label": "3.45", "title": "combo_ct:949, comboWR:58.9, combo+-:3.45, AB_AveWR:55.45", "to": "Seedship Impact", "value": 3.45}, {"from": "Haliya, Ascendant Cadet", "label": "4.66", "title": "combo_ct:604, comboWR:59.11, combo+-:4.66, AB_AveWR:54.45", "to": "Emergency Eject", "value": 4.66}, {"from": "Haliya, Ascendant Cadet", "label": "3.64", "title": "combo_ct:1743, comboWR:59.04, combo+-:3.64, AB_AveWR:55.4", "to": "Radiant Strike", "value": 3.64}, {"from": "Haliya, Ascendant Cadet", "label": "3.44", "title": "combo_ct:1618, comboWR:58.84, combo+-:3.44, AB_AveWR:55.4", "to": "Thawbringer", "value": 3.44}, {"from": "Flight-Deck Coordinator", "label": "3.1", "title": "combo_ct:1520, comboWR:57.5, combo+-:3.1, AB_AveWR:54.4", "to": "Auxiliary Boosters", "value": 3.1}, {"from": "Flight-Deck Coordinator", "label": "4.19", "title": "combo_ct:785, comboWR:58.34, combo+-:4.19, AB_AveWR:54.15", "to": "Wedgelight Rammer", "value": 4.19}, {"from": "Auxiliary Boosters", "label": "4.13", "title": "combo_ct:980, comboWR:59.18, combo+-:4.13, AB_AveWR:55.05", "to": "Blooming Stinger", "value": 4.13}, {"from": "Auxiliary Boosters", "label": "3.08", "title": "combo_ct:537, comboWR:59.03, combo+-:3.08, AB_AveWR:55.95", "to": "Edge Rover", "value": 3.08}, {"from": "Auxiliary Boosters", "label": "4.82", "title": "combo_ct:575, comboWR:61.57, combo+-:4.82, AB_AveWR:56.75", "to": "Meltstrider\u0027s Resolve", "value": 4.82}, {"from": "Auxiliary Boosters", "label": "3.78", "title": "combo_ct:929, comboWR:58.88, combo+-:3.78, AB_AveWR:55.1", "to": "Thawbringer", "value": 3.78}, {"from": "Blooming Stinger", "label": "4.45", "title": "combo_ct:4980, comboWR:61.95, combo+-:4.45, AB_AveWR:57.5", "to": "Glacier Godmaw", "value": 4.45}, {"from": "Edge Rover", "label": "5.62", "title": "combo_ct:2938, comboWR:64.02, combo+-:5.62, AB_AveWR:58.4", "to": "Glacier Godmaw", "value": 5.62}, {"from": "Meltstrider\u0027s Resolve", "label": "3.32", "title": "combo_ct:731, comboWR:60.47, combo+-:3.32, AB_AveWR:57.15", "to": "Radiant Strike", "value": 3.32}, {"from": "Meltstrider\u0027s Resolve", "label": "5.26", "title": "combo_ct:616, comboWR:63.96, combo+-:5.26, AB_AveWR:58.7", "to": "Starfield Shepherd", "value": 5.26}, {"from": "Meltstrider\u0027s Resolve", "label": "4.37", "title": "combo_ct:547, comboWR:62.52, combo+-:4.37, AB_AveWR:58.15", "to": "Sunstar Expansionist", "value": 4.37}, {"from": "Meltstrider\u0027s Resolve", "label": "3.81", "title": "combo_ct:3201, comboWR:60.11, combo+-:3.81, AB_AveWR:56.3", "to": "Drix Fatemaker", "value": 3.81}, {"from": "Meltstrider\u0027s Resolve", "label": "3.56", "title": "combo_ct:4573, comboWR:60.86, combo+-:3.56, AB_AveWR:57.3", "to": "Germinating Wurm", "value": 3.56}, {"from": "Meltstrider\u0027s Resolve", "label": "3.73", "title": "combo_ct:2646, comboWR:62.93, combo+-:3.73, AB_AveWR:59.2", "to": "Glacier Godmaw", "value": 3.73}, {"from": "Meltstrider\u0027s Resolve", "label": "4.4", "title": "combo_ct:2618, comboWR:62.95, combo+-:4.4, AB_AveWR:58.55", "to": "Harmonious Grovestrider", "value": 4.4}, {"from": "Meltstrider\u0027s Resolve", "label": "5.12", "title": "combo_ct:1082, comboWR:61.37, combo+-:5.12, AB_AveWR:56.25", "to": "Tapestry Warden", "value": 5.12}, {"from": "Thawbringer", "label": "3.36", "title": "combo_ct:4099, comboWR:59.31, combo+-:3.36, AB_AveWR:55.95", "to": "Close Encounter", "value": 3.36}, {"from": "Starfield Shepherd", "label": "4.83", "title": "combo_ct:1128, comboWR:60.28, combo+-:4.83, AB_AveWR:55.45", "to": "Dawnstrike Vanguard", "value": 4.83}, {"from": "Starfield Shepherd", "label": "3.46", "title": "combo_ct:1092, comboWR:58.61, combo+-:3.46, AB_AveWR:55.15", "to": "Luxknight Breacher", "value": 3.46}, {"from": "Starfield Shepherd", "label": "4.06", "title": "combo_ct:3536, comboWR:61.11, combo+-:4.06, AB_AveWR:57.05", "to": "Radiant Strike", "value": 4.06}, {"from": "Starfield Shepherd", "label": "4.18", "title": "combo_ct:621, comboWR:60.23, combo+-:4.18, AB_AveWR:56.05", "to": "Squire\u0027s Lightblade", "value": 4.18}, {"from": "Starfield Shepherd", "label": "4.01", "title": "combo_ct:621, comboWR:61.51, combo+-:4.01, AB_AveWR:57.5", "to": "Close Encounter", "value": 4.01}, {"from": "Starfield Shepherd", "label": "3.05", "title": "combo_ct:795, comboWR:60.25, combo+-:3.05, AB_AveWR:57.2", "to": "Germinating Wurm", "value": 3.05}, {"from": "Starfield Shepherd", "label": "11.53", "title": "combo_ct:572, comboWR:70.63, combo+-:11.53, AB_AveWR:59.1", "to": "Glacier Godmaw", "value": 11.53}, {"from": "Starfield Shepherd", "label": "4.7", "title": "combo_ct:521, comboWR:63.15, combo+-:4.7, AB_AveWR:58.45", "to": "Harmonious Grovestrider", "value": 4.7}, {"from": "Starfield Shepherd", "label": "3.16", "title": "combo_ct:557, comboWR:60.86, combo+-:3.16, AB_AveWR:57.7", "to": "Seedship Agrarian", "value": 3.16}, {"from": "Sunstar Expansionist", "label": "3.64", "title": "combo_ct:1020, comboWR:58.24, combo+-:3.64, AB_AveWR:54.6", "to": "Luxknight Breacher", "value": 3.64}, {"from": "Sunstar Expansionist", "label": "3.17", "title": "combo_ct:3127, comboWR:59.67, combo+-:3.17, AB_AveWR:56.5", "to": "Radiant Strike", "value": 3.17}, {"from": "Sunstar Expansionist", "label": "5.08", "title": "combo_ct:1011, comboWR:60.93, combo+-:5.08, AB_AveWR:55.85", "to": "Seam Rip", "value": 5.08}, {"from": "Sunstar Expansionist", "label": "3.29", "title": "combo_ct:626, comboWR:58.79, combo+-:3.29, AB_AveWR:55.5", "to": "Squire\u0027s Lightblade", "value": 3.29}, {"from": "Sunstar Expansionist", "label": "3.67", "title": "combo_ct:1210, comboWR:61.57, combo+-:3.67, AB_AveWR:57.9", "to": "Galactic Wayfarer", "value": 3.67}, {"from": "Sunstar Expansionist", "label": "5.58", "title": "combo_ct:538, comboWR:64.13, combo+-:5.58, AB_AveWR:58.55", "to": "Glacier Godmaw", "value": 5.58}, {"from": "Galactic Wayfarer", "label": "4.38", "title": "combo_ct:552, comboWR:60.33, combo+-:4.38, AB_AveWR:55.95", "to": "Emergency Eject", "value": 4.38}, {"from": "Galactic Wayfarer", "label": "3.38", "title": "combo_ct:6503, comboWR:60.73, combo+-:3.38, AB_AveWR:57.35", "to": "Close Encounter", "value": 3.38}, {"from": "Galactic Wayfarer", "label": "3.07", "title": "combo_ct:6335, comboWR:60.47, combo+-:3.07, AB_AveWR:57.4", "to": "Eumidian Terrabotanist", "value": 3.07}, {"from": "Galactic Wayfarer", "label": "5.02", "title": "combo_ct:5984, comboWR:62.62, combo+-:5.02, AB_AveWR:57.6", "to": "Eusocial Engineering", "value": 5.02}, {"from": "Galactic Wayfarer", "label": "6.26", "title": "combo_ct:7369, comboWR:65.21, combo+-:6.26, AB_AveWR:58.95", "to": "Glacier Godmaw", "value": 6.26}, {"from": "Galactic Wayfarer", "label": "3.38", "title": "combo_ct:6004, comboWR:61.38, combo+-:3.38, AB_AveWR:58.0", "to": "Seedship Impact", "value": 3.38}, {"from": "Harmonious Grovestrider", "label": "4.0", "title": "combo_ct:4191, comboWR:60.1, combo+-:4.0, AB_AveWR:56.1", "to": "Sami\u0027s Curiosity", "value": 4.0}, {"from": "Harmonious Grovestrider", "label": "3.82", "title": "combo_ct:2499, comboWR:61.82, combo+-:3.82, AB_AveWR:58.0", "to": "Seedship Impact", "value": 3.82}, {"from": "Hemosymbic Mite", "label": "4.01", "title": "combo_ct:587, comboWR:57.41, combo+-:4.01, AB_AveWR:53.4", "to": "Broodguard Elite", "value": 4.01}, {"from": "Hemosymbic Mite", "label": "4.6", "title": "combo_ct:665, comboWR:59.7, combo+-:4.6, AB_AveWR:55.1", "to": "Close Encounter", "value": 4.6}, {"from": "Hemosymbic Mite", "label": "3.27", "title": "combo_ct:1393, comboWR:57.07, combo+-:3.27, AB_AveWR:53.8", "to": "Drix Fatemaker", "value": 3.27}, {"from": "Emergency Eject", "label": "4.49", "title": "combo_ct:665, comboWR:57.44, combo+-:4.49, AB_AveWR:52.95", "to": "Dawnstrike Vanguard", "value": 4.49}, {"from": "Emergency Eject", "label": "3.27", "title": "combo_ct:751, comboWR:57.92, combo+-:3.27, AB_AveWR:54.65", "to": "Honor", "value": 3.27}, {"from": "Emergency Eject", "label": "3.15", "title": "combo_ct:638, comboWR:57.05, combo+-:3.15, AB_AveWR:53.9", "to": "Wedgelight Rammer", "value": 3.15}, {"from": "Dawnstrike Vanguard", "label": "3.2", "title": "combo_ct:704, comboWR:57.95, combo+-:3.2, AB_AveWR:54.75", "to": "Gene Pollinator", "value": 3.2}, {"from": "Gene Pollinator", "label": "3.14", "title": "combo_ct:2833, comboWR:58.24, combo+-:3.14, AB_AveWR:55.1", "to": "Broodguard Elite", "value": 3.14}, {"from": "Gene Pollinator", "label": "4.56", "title": "combo_ct:6603, comboWR:62.96, combo+-:4.56, AB_AveWR:58.4", "to": "Glacier Godmaw", "value": 4.56}, {"from": "Dual-Sun Technique", "label": "6.04", "title": "combo_ct:624, comboWR:58.49, combo+-:6.04, AB_AveWR:52.45", "to": "Drix Fatemaker", "value": 6.04}, {"from": "Honor", "label": "3.71", "title": "combo_ct:1546, comboWR:58.41, combo+-:3.71, AB_AveWR:54.7", "to": "Starport Security", "value": 3.71}, {"from": "Wedgelight Rammer", "label": "3.08", "title": "combo_ct:910, comboWR:57.03, combo+-:3.08, AB_AveWR:53.95", "to": "Starport Security", "value": 3.08}, {"from": "Lashwhip Predator", "label": "3.13", "title": "combo_ct:1408, comboWR:58.88, combo+-:3.13, AB_AveWR:55.75", "to": "Eusocial Engineering", "value": 3.13}, {"from": "Lashwhip Predator", "label": "3.58", "title": "combo_ct:1658, comboWR:60.68, combo+-:3.58, AB_AveWR:57.1", "to": "Glacier Godmaw", "value": 3.58}, {"from": "Lashwhip Predator", "label": "3.29", "title": "combo_ct:1462, comboWR:59.44, combo+-:3.29, AB_AveWR:56.15", "to": "Seedship Impact", "value": 3.29}, {"from": "Glacier Godmaw", "label": "4.31", "title": "combo_ct:2641, comboWR:62.36, combo+-:4.31, AB_AveWR:58.05", "to": "Eumidian Terrabotanist", "value": 4.31}, {"from": "Glacier Godmaw", "label": "7.55", "title": "combo_ct:2357, comboWR:65.8, combo+-:7.55, AB_AveWR:58.25", "to": "Eusocial Engineering", "value": 7.55}, {"from": "Glacier Godmaw", "label": "3.98", "title": "combo_ct:4624, comboWR:61.68, combo+-:3.98, AB_AveWR:57.7", "to": "Germinating Wurm", "value": 3.98}, {"from": "Glacier Godmaw", "label": "6.47", "title": "combo_ct:4704, comboWR:63.22, combo+-:6.47, AB_AveWR:56.75", "to": "Sami\u0027s Curiosity", "value": 6.47}, {"from": "Glacier Godmaw", "label": "4.76", "title": "combo_ct:2454, comboWR:62.96, combo+-:4.76, AB_AveWR:58.2", "to": "Seedship Agrarian", "value": 4.76}, {"from": "Glacier Godmaw", "label": "5.64", "title": "combo_ct:2456, comboWR:64.29, combo+-:5.64, AB_AveWR:58.65", "to": "Seedship Impact", "value": 5.64}, {"from": "Seedship Impact", "label": "3.56", "title": "combo_ct:640, comboWR:60.16, combo+-:3.56, AB_AveWR:56.6", "to": "Radiant Strike", "value": 3.56}, {"from": "Seedship Impact", "label": "3.77", "title": "combo_ct:2137, comboWR:61.07, combo+-:3.77, AB_AveWR:57.3", "to": "Eusocial Engineering", "value": 3.77}, {"from": "Seedship Impact", "label": "3.07", "title": "combo_ct:4169, comboWR:59.82, combo+-:3.07, AB_AveWR:56.75", "to": "Germinating Wurm", "value": 3.07}, {"from": "Seedship Impact", "label": "4.37", "title": "combo_ct:2186, comboWR:61.62, combo+-:4.37, AB_AveWR:57.25", "to": "Seedship Agrarian", "value": 4.37}, {"from": "Seedship Impact", "label": "4.23", "title": "combo_ct:886, comboWR:59.93, combo+-:4.23, AB_AveWR:55.7", "to": "Tapestry Warden", "value": 4.23}, {"from": "Radiant Strike", "label": "3.92", "title": "combo_ct:698, comboWR:58.17, combo+-:3.92, AB_AveWR:54.25", "to": "Broodguard Elite", "value": 3.92}, {"from": "Radiant Strike", "label": "3.95", "title": "combo_ct:739, comboWR:59.95, combo+-:3.95, AB_AveWR:56.0", "to": "Eumidian Terrabotanist", "value": 3.95}, {"from": "Eumidian Terrabotanist", "label": "5.46", "title": "combo_ct:1027, comboWR:60.56, combo+-:5.46, AB_AveWR:55.1", "to": "Tapestry Warden", "value": 5.46}, {"from": "Close Encounter", "label": "3.91", "title": "combo_ct:1955, comboWR:60.56, combo+-:3.91, AB_AveWR:56.65", "to": "Eusocial Engineering", "value": 3.91}, {"from": "Close Encounter", "label": "3.75", "title": "combo_ct:4379, comboWR:59.85, combo+-:3.75, AB_AveWR:56.1", "to": "Germinating Wurm", "value": 3.75}, {"from": "Eusocial Engineering", "label": "3.93", "title": "combo_ct:3922, comboWR:59.33, combo+-:3.93, AB_AveWR:55.4", "to": "Sami\u0027s Curiosity", "value": 3.93}, {"from": "Eusocial Engineering", "label": "4.45", "title": "combo_ct:1051, comboWR:58.8, combo+-:4.45, AB_AveWR:54.35", "to": "Shattered Wings", "value": 4.45}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

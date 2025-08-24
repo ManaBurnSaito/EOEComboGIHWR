@@ -1,0 +1,386 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Terrapact Intimidator">Terrapact Intimidator</option>
+                                
+                                    <option value="Kav Landseeker">Kav Landseeker</option>
+                                
+                                    <option value="Cut Propulsion">Cut Propulsion</option>
+                                
+                                    <option value="Kavaron Harrier">Kavaron Harrier</option>
+                                
+                                    <option value="Molecular Modifier">Molecular Modifier</option>
+                                
+                                    <option value="Nebula Dragon">Nebula Dragon</option>
+                                
+                                    <option value="Orbital Plunge">Orbital Plunge</option>
+                                
+                                    <option value="Slagdrill Scrapper">Slagdrill Scrapper</option>
+                                
+                                    <option value="Territorial Bruntar">Territorial Bruntar</option>
+                                
+                                    <option value="Weftstalker Ardent">Weftstalker Ardent</option>
+                                
+                                    <option value="Zookeeper Mechan">Zookeeper Mechan</option>
+                                
+                                    <option value="Debris Field Crusher">Debris Field Crusher</option>
+                                
+                                    <option value="Vaultguard Trooper">Vaultguard Trooper</option>
+                                
+                                    <option value="Invasive Maneuvers">Invasive Maneuvers</option>
+                                
+                                    <option value="Systems Override">Systems Override</option>
+                                
+                                    <option value="Memorial Team Leader">Memorial Team Leader</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Terrapact Intimidator", "image": "img/Terrapact_Intimidator.png", "label": "Terrapact Intimidator", "shape": "image", "title": "GIHWR:59.5, avg_pick:3.06", "url": "R_combo_network_Terrapact_Intimidator"}, {"color": "#97c2fc", "id": "Kav Landseeker", "image": "img/Kav_Landseeker.png", "label": "Kav Landseeker", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.36", "url": "R_combo_network_Kav_Landseeker"}, {"color": "#97c2fc", "id": "Cut Propulsion", "image": "img/Cut_Propulsion.png", "label": "Cut Propulsion", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.99", "url": "R_combo_network_Cut_Propulsion"}, {"color": "#97c2fc", "id": "Kavaron Harrier", "image": "img/Kavaron_Harrier.png", "label": "Kavaron Harrier", "shape": "image", "title": "GIHWR:56.2, avg_pick:5.7", "url": "R_combo_network_Kavaron_Harrier"}, {"color": "#97c2fc", "id": "Molecular Modifier", "image": "img/Molecular_Modifier.png", "label": "Molecular Modifier", "shape": "image", "title": "GIHWR:54.6, avg_pick:6.3", "url": "R_combo_network_Molecular_Modifier"}, {"color": "#97c2fc", "id": "Nebula Dragon", "image": "img/Nebula_Dragon.png", "label": "Nebula Dragon", "shape": "image", "title": "GIHWR:56.2, avg_pick:9.5", "url": "R_combo_network_Nebula_Dragon"}, {"color": "#97c2fc", "id": "Orbital Plunge", "image": "img/Orbital_Plunge.png", "label": "Orbital Plunge", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.17", "url": "R_combo_network_Orbital_Plunge"}, {"color": "#97c2fc", "id": "Slagdrill Scrapper", "image": "img/Slagdrill_Scrapper.png", "label": "Slagdrill Scrapper", "shape": "image", "title": "GIHWR:53.8, avg_pick:9.75", "url": "R_combo_network_Slagdrill_Scrapper"}, {"color": "#97c2fc", "id": "Territorial Bruntar", "image": "img/Territorial_Bruntar.png", "label": "Territorial Bruntar", "shape": "image", "title": "GIHWR:55.8, avg_pick:5.39", "url": "R_combo_network_Territorial_Bruntar"}, {"color": "#97c2fc", "id": "Weftstalker Ardent", "image": "img/Weftstalker_Ardent.png", "label": "Weftstalker Ardent", "shape": "image", "title": "GIHWR:53.5, avg_pick:6.21", "url": "R_combo_network_Weftstalker_Ardent"}, {"color": "#97c2fc", "id": "Zookeeper Mechan", "image": "img/Zookeeper_Mechan.png", "label": "Zookeeper Mechan", "shape": "image", "title": "GIHWR:55.9, avg_pick:5.78", "url": "R_combo_network_Zookeeper_Mechan"}, {"color": "#97c2fc", "id": "Debris Field Crusher", "image": "img/Debris_Field_Crusher.png", "label": "Debris Field Crusher", "shape": "image", "title": "GIHWR:52.2, avg_pick:6.47", "url": "R_combo_network_Debris_Field_Crusher"}, {"color": "#97c2fc", "id": "Vaultguard Trooper", "image": "img/Vaultguard_Trooper.png", "label": "Vaultguard Trooper", "shape": "image", "title": "GIHWR:53.7, avg_pick:7.55", "url": "R_combo_network_Vaultguard_Trooper"}, {"color": "#97c2fc", "id": "Invasive Maneuvers", "image": "img/Invasive_Maneuvers.png", "label": "Invasive Maneuvers", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.11", "url": "R_combo_network_Invasive_Maneuvers"}, {"color": "#97c2fc", "id": "Systems Override", "image": "img/Systems_Override.png", "label": "Systems Override", "shape": "image", "title": "GIHWR:56.0, avg_pick:8.53", "url": "R_combo_network_Systems_Override"}, {"color": "#97c2fc", "id": "Memorial Team Leader", "image": "img/Memorial_Team_Leader.png", "label": "Memorial Team Leader", "shape": "image", "title": "GIHWR:53.2, avg_pick:7.37", "url": "R_combo_network_Memorial_Team_Leader"}]);
+                  edges = new vis.DataSet([{"from": "Terrapact Intimidator", "label": "6.07", "title": "combo_ct:2455, comboWR:63.67, combo+-:6.07, AB_AveWR:57.6", "to": "Cut Propulsion", "value": 2455}, {"from": "Terrapact Intimidator", "label": "6.46", "title": "combo_ct:1125, comboWR:62.31, combo+-:6.46, AB_AveWR:55.85", "to": "Debris Field Crusher", "value": 1125}, {"from": "Terrapact Intimidator", "label": "3.82", "title": "combo_ct:2219, comboWR:61.42, combo+-:3.82, AB_AveWR:57.6", "to": "Invasive Maneuvers", "value": 2219}, {"from": "Terrapact Intimidator", "label": "3.09", "title": "combo_ct:1102, comboWR:59.44, combo+-:3.09, AB_AveWR:56.35", "to": "Memorial Team Leader", "value": 1102}, {"from": "Terrapact Intimidator", "label": "4.08", "title": "combo_ct:2448, comboWR:61.93, combo+-:4.08, AB_AveWR:57.85", "to": "Nebula Dragon", "value": 2448}, {"from": "Terrapact Intimidator", "label": "4.12", "title": "combo_ct:6073, comboWR:62.47, combo+-:4.12, AB_AveWR:58.35", "to": "Orbital Plunge", "value": 6073}, {"from": "Terrapact Intimidator", "label": "3.32", "title": "combo_ct:2313, comboWR:59.97, combo+-:3.32, AB_AveWR:56.65", "to": "Slagdrill Scrapper", "value": 2313}, {"from": "Terrapact Intimidator", "label": "4.58", "title": "combo_ct:807, comboWR:62.33, combo+-:4.58, AB_AveWR:57.75", "to": "Systems Override", "value": 807}, {"from": "Terrapact Intimidator", "label": "3.98", "title": "combo_ct:2020, comboWR:61.63, combo+-:3.98, AB_AveWR:57.65", "to": "Territorial Bruntar", "value": 2020}, {"from": "Terrapact Intimidator", "label": "4.27", "title": "combo_ct:1352, comboWR:60.87, combo+-:4.27, AB_AveWR:56.6", "to": "Vaultguard Trooper", "value": 1352}, {"from": "Terrapact Intimidator", "label": "4.56", "title": "combo_ct:1279, comboWR:61.06, combo+-:4.56, AB_AveWR:56.5", "to": "Weftstalker Ardent", "value": 1279}, {"from": "Kav Landseeker", "label": "3.26", "title": "combo_ct:3786, comboWR:59.11, combo+-:3.26, AB_AveWR:55.85", "to": "Cut Propulsion", "value": 3786}, {"from": "Kav Landseeker", "label": "3.07", "title": "combo_ct:3569, comboWR:58.92, combo+-:3.07, AB_AveWR:55.85", "to": "Invasive Maneuvers", "value": 3569}, {"from": "Kav Landseeker", "label": "3.81", "title": "combo_ct:4422, comboWR:59.91, combo+-:3.81, AB_AveWR:56.1", "to": "Nebula Dragon", "value": 4422}, {"from": "Kav Landseeker", "label": "4.98", "title": "combo_ct:1148, comboWR:60.98, combo+-:4.98, AB_AveWR:56.0", "to": "Systems Override", "value": 1148}, {"from": "Cut Propulsion", "label": "3.09", "title": "combo_ct:1499, comboWR:59.04, combo+-:3.09, AB_AveWR:55.95", "to": "Kavaron Harrier", "value": 1499}, {"from": "Cut Propulsion", "label": "3.04", "title": "combo_ct:1416, comboWR:58.19, combo+-:3.04, AB_AveWR:55.15", "to": "Molecular Modifier", "value": 1416}, {"from": "Cut Propulsion", "label": "5.11", "title": "combo_ct:1831, comboWR:61.06, combo+-:5.11, AB_AveWR:55.95", "to": "Nebula Dragon", "value": 1831}, {"from": "Cut Propulsion", "label": "3.05", "title": "combo_ct:4689, comboWR:59.5, combo+-:3.05, AB_AveWR:56.45", "to": "Orbital Plunge", "value": 4689}, {"from": "Cut Propulsion", "label": "3.01", "title": "combo_ct:1939, comboWR:57.76, combo+-:3.01, AB_AveWR:54.75", "to": "Slagdrill Scrapper", "value": 1939}, {"from": "Cut Propulsion", "label": "4.38", "title": "combo_ct:1653, comboWR:60.13, combo+-:4.38, AB_AveWR:55.75", "to": "Territorial Bruntar", "value": 1653}, {"from": "Cut Propulsion", "label": "3.4", "title": "combo_ct:1081, comboWR:58.0, combo+-:3.4, AB_AveWR:54.6", "to": "Weftstalker Ardent", "value": 1081}, {"from": "Cut Propulsion", "label": "3.02", "title": "combo_ct:4728, comboWR:58.82, combo+-:3.02, AB_AveWR:55.8", "to": "Zookeeper Mechan", "value": 4728}, {"from": "Kavaron Harrier", "label": "3.97", "title": "combo_ct:1037, comboWR:60.17, combo+-:3.97, AB_AveWR:56.2", "to": "Nebula Dragon", "value": 1037}, {"from": "Molecular Modifier", "label": "5.67", "title": "combo_ct:987, comboWR:59.57, combo+-:5.67, AB_AveWR:53.9", "to": "Memorial Team Leader", "value": 987}, {"from": "Nebula Dragon", "label": "4.17", "title": "combo_ct:5421, comboWR:60.87, combo+-:4.17, AB_AveWR:56.7", "to": "Orbital Plunge", "value": 5421}, {"from": "Nebula Dragon", "label": "4.05", "title": "combo_ct:4521, comboWR:60.1, combo+-:4.05, AB_AveWR:56.05", "to": "Zookeeper Mechan", "value": 4521}, {"from": "Orbital Plunge", "label": "3.3", "title": "combo_ct:4803, comboWR:58.8, combo+-:3.3, AB_AveWR:55.5", "to": "Slagdrill Scrapper", "value": 4803}, {"from": "Orbital Plunge", "label": "3.17", "title": "combo_ct:4379, comboWR:59.67, combo+-:3.17, AB_AveWR:56.5", "to": "Territorial Bruntar", "value": 4379}, {"from": "Orbital Plunge", "label": "3.47", "title": "combo_ct:2484, comboWR:58.82, combo+-:3.47, AB_AveWR:55.35", "to": "Weftstalker Ardent", "value": 2484}, {"from": "Orbital Plunge", "label": "3.57", "title": "combo_ct:11905, comboWR:60.12, combo+-:3.57, AB_AveWR:56.55", "to": "Zookeeper Mechan", "value": 11905}, {"from": "Weftstalker Ardent", "label": "4.2", "title": "combo_ct:645, comboWR:57.05, combo+-:4.2, AB_AveWR:52.85", "to": "Debris Field Crusher", "value": 645}, {"from": "Debris Field Crusher", "label": "5.07", "title": "combo_ct:648, comboWR:58.02, combo+-:5.07, AB_AveWR:52.95", "to": "Vaultguard Trooper", "value": 648}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,448 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Cloudsculpt Technician">Cloudsculpt Technician</option>
+                                
+                                    <option value="Annul">Annul</option>
+                                
+                                    <option value="Codecracker Hound">Codecracker Hound</option>
+                                
+                                    <option value="Cryogen Relic">Cryogen Relic</option>
+                                
+                                    <option value="Divert Disaster">Divert Disaster</option>
+                                
+                                    <option value="Desculpting Blast">Desculpting Blast</option>
+                                
+                                    <option value="Cerebral Download">Cerebral Download</option>
+                                
+                                    <option value="Mouth of the Storm">Mouth of the Storm</option>
+                                
+                                    <option value="Scour for Scrap">Scour for Scrap</option>
+                                
+                                    <option value="Tractor Beam">Tractor Beam</option>
+                                
+                                    <option value="Cryoshatter">Cryoshatter</option>
+                                
+                                    <option value="Gigastorm Titan">Gigastorm Titan</option>
+                                
+                                    <option value="Illvoi Galeblade">Illvoi Galeblade</option>
+                                
+                                    <option value="Illvoi Infiltrator">Illvoi Infiltrator</option>
+                                
+                                    <option value="Illvoi Light Jammer">Illvoi Light Jammer</option>
+                                
+                                    <option value="Illvoi Operative">Illvoi Operative</option>
+                                
+                                    <option value="Lost in Space">Lost in Space</option>
+                                
+                                    <option value="Mechan Assembler">Mechan Assembler</option>
+                                
+                                    <option value="Mechan Navigator">Mechan Navigator</option>
+                                
+                                    <option value="Mechan Shieldmate">Mechan Shieldmate</option>
+                                
+                                    <option value="Mental Modulation">Mental Modulation</option>
+                                
+                                    <option value="Selfcraft Mechan">Selfcraft Mechan</option>
+                                
+                                    <option value="Unravel">Unravel</option>
+                                
+                                    <option value="Uthros Psionicist">Uthros Psionicist</option>
+                                
+                                    <option value="Nebula Dragon">Nebula Dragon</option>
+                                
+                                    <option value="Plasma Bolt">Plasma Bolt</option>
+                                
+                                    <option value="Specimen Freighter">Specimen Freighter</option>
+                                
+                                    <option value="Uthros Scanship">Uthros Scanship</option>
+                                
+                                    <option value="Slagdrill Scrapper">Slagdrill Scrapper</option>
+                                
+                                    <option value="Kavaron Turbodrone">Kavaron Turbodrone</option>
+                                
+                                    <option value="Melded Moxite">Melded Moxite</option>
+                                
+                                    <option value="Orbital Plunge">Orbital Plunge</option>
+                                
+                                    <option value="Invasive Maneuvers">Invasive Maneuvers</option>
+                                
+                                    <option value="Terrapact Intimidator">Terrapact Intimidator</option>
+                                
+                                    <option value="Mechanozoa">Mechanozoa</option>
+                                
+                                    <option value="Cut Propulsion">Cut Propulsion</option>
+                                
+                                    <option value="Kav Landseeker">Kav Landseeker</option>
+                                
+                                    <option value="Zookeeper Mechan">Zookeeper Mechan</option>
+                                
+                                    <option value="Nanoform Sentinel">Nanoform Sentinel</option>
+                                
+                                    <option value="Kavaron Harrier">Kavaron Harrier</option>
+                                
+                                    <option value="Molecular Modifier">Molecular Modifier</option>
+                                
+                                    <option value="Territorial Bruntar">Territorial Bruntar</option>
+                                
+                                    <option value="Weftstalker Ardent">Weftstalker Ardent</option>
+                                
+                                    <option value="Debris Field Crusher">Debris Field Crusher</option>
+                                
+                                    <option value="Vaultguard Trooper">Vaultguard Trooper</option>
+                                
+                                    <option value="Systems Override">Systems Override</option>
+                                
+                                    <option value="Memorial Team Leader">Memorial Team Leader</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Cloudsculpt Technician", "image": "img/Cloudsculpt_Technician.png", "label": "Cloudsculpt Technician", "shape": "image", "title": "GIHWR:51.6, avg_pick:10.2", "url": "UR_combo_network_Cloudsculpt_Technician"}, {"color": "#97c2fc", "id": "Annul", "image": "img/Annul.png", "label": "Annul", "shape": "image", "title": "GIHWR:51.0, avg_pick:8.85", "url": "UR_combo_network_Annul"}, {"color": "#97c2fc", "id": "Codecracker Hound", "image": "img/Codecracker_Hound.png", "label": "Codecracker Hound", "shape": "image", "title": "GIHWR:59.8, avg_pick:3.22", "url": "UR_combo_network_Codecracker_Hound"}, {"color": "#97c2fc", "id": "Cryogen Relic", "image": "img/Cryogen_Relic.png", "label": "Cryogen Relic", "shape": "image", "title": "GIHWR:59.2, avg_pick:4.65", "url": "UR_combo_network_Cryogen_Relic"}, {"color": "#97c2fc", "id": "Divert Disaster", "image": "img/Divert_Disaster.png", "label": "Divert Disaster", "shape": "image", "title": "GIHWR:56.5, avg_pick:8.99", "url": "UR_combo_network_Divert_Disaster"}, {"color": "#97c2fc", "id": "Desculpting Blast", "image": "img/Desculpting_Blast.png", "label": "Desculpting Blast", "shape": "image", "title": "GIHWR:57.3, avg_pick:4.88", "url": "UR_combo_network_Desculpting_Blast"}, {"color": "#97c2fc", "id": "Cerebral Download", "image": "img/Cerebral_Download.png", "label": "Cerebral Download", "shape": "image", "title": "GIHWR:54.8, avg_pick:6.19", "url": "UR_combo_network_Cerebral_Download"}, {"color": "#97c2fc", "id": "Mouth of the Storm", "image": "img/Mouth_of_the_Storm.png", "label": "Mouth of the Storm", "shape": "image", "title": "GIHWR:58.2, avg_pick:4.81", "url": "UR_combo_network_Mouth_of_the_Storm"}, {"color": "#97c2fc", "id": "Scour for Scrap", "image": "img/Scour_for_Scrap.png", "label": "Scour for Scrap", "shape": "image", "title": "GIHWR:54.1, avg_pick:8.7", "url": "UR_combo_network_Scour_for_Scrap"}, {"color": "#97c2fc", "id": "Tractor Beam", "image": "img/Tractor_Beam.png", "label": "Tractor Beam", "shape": "image", "title": "GIHWR:58.2, avg_pick:3.75", "url": "UR_combo_network_Tractor_Beam"}, {"color": "#97c2fc", "id": "Cryoshatter", "image": "img/Cryoshatter.png", "label": "Cryoshatter", "shape": "image", "title": "GIHWR:56.0, avg_pick:6.42", "url": "UR_combo_network_Cryoshatter"}, {"color": "#97c2fc", "id": "Gigastorm Titan", "image": "img/Gigastorm_Titan.png", "label": "Gigastorm Titan", "shape": "image", "title": "GIHWR:56.8, avg_pick:4.44", "url": "UR_combo_network_Gigastorm_Titan"}, {"color": "#97c2fc", "id": "Illvoi Galeblade", "image": "img/Illvoi_Galeblade.png", "label": "Illvoi Galeblade", "shape": "image", "title": "GIHWR:54.6, avg_pick:9.02", "url": "UR_combo_network_Illvoi_Galeblade"}, {"color": "#97c2fc", "id": "Illvoi Infiltrator", "image": "img/Illvoi_Infiltrator.png", "label": "Illvoi Infiltrator", "shape": "image", "title": "GIHWR:54.5, avg_pick:4.84", "url": "UR_combo_network_Illvoi_Infiltrator"}, {"color": "#97c2fc", "id": "Illvoi Light Jammer", "image": "img/Illvoi_Light_Jammer.png", "label": "Illvoi Light Jammer", "shape": "image", "title": "GIHWR:55.1, avg_pick:10.14", "url": "UR_combo_network_Illvoi_Light_Jammer"}, {"color": "#97c2fc", "id": "Illvoi Operative", "image": "img/Illvoi_Operative.png", "label": "Illvoi Operative", "shape": "image", "title": "GIHWR:54.0, avg_pick:9.11", "url": "UR_combo_network_Illvoi_Operative"}, {"color": "#97c2fc", "id": "Lost in Space", "image": "img/Lost_in_Space.png", "label": "Lost in Space", "shape": "image", "title": "GIHWR:56.2, avg_pick:8.8", "url": "UR_combo_network_Lost_in_Space"}, {"color": "#97c2fc", "id": "Mechan Assembler", "image": "img/Mechan_Assembler.png", "label": "Mechan Assembler", "shape": "image", "title": "GIHWR:54.0, avg_pick:4.29", "url": "UR_combo_network_Mechan_Assembler"}, {"color": "#97c2fc", "id": "Mechan Navigator", "image": "img/Mechan_Navigator.png", "label": "Mechan Navigator", "shape": "image", "title": "GIHWR:55.3, avg_pick:5.68", "url": "UR_combo_network_Mechan_Navigator"}, {"color": "#97c2fc", "id": "Mechan Shieldmate", "image": "img/Mechan_Shieldmate.png", "label": "Mechan Shieldmate", "shape": "image", "title": "GIHWR:52.6, avg_pick:9.86", "url": "UR_combo_network_Mechan_Shieldmate"}, {"color": "#97c2fc", "id": "Mental Modulation", "image": "img/Mental_Modulation.png", "label": "Mental Modulation", "shape": "image", "title": "GIHWR:53.3, avg_pick:9.76", "url": "UR_combo_network_Mental_Modulation"}, {"color": "#97c2fc", "id": "Selfcraft Mechan", "image": "img/Selfcraft_Mechan.png", "label": "Selfcraft Mechan", "shape": "image", "title": "GIHWR:56.4, avg_pick:7.07", "url": "UR_combo_network_Selfcraft_Mechan"}, {"color": "#97c2fc", "id": "Unravel", "image": "img/Unravel.png", "label": "Unravel", "shape": "image", "title": "GIHWR:55.1, avg_pick:8.0", "url": "UR_combo_network_Unravel"}, {"color": "#97c2fc", "id": "Uthros Psionicist", "image": "img/Uthros_Psionicist.png", "label": "Uthros Psionicist", "shape": "image", "title": "GIHWR:57.3, avg_pick:4.69", "url": "UR_combo_network_Uthros_Psionicist"}, {"color": "#97c2fc", "id": "Nebula Dragon", "image": "img/Nebula_Dragon.png", "label": "Nebula Dragon", "shape": "image", "title": "GIHWR:56.2, avg_pick:9.5", "url": "UR_combo_network_Nebula_Dragon"}, {"color": "#97c2fc", "id": "Plasma Bolt", "image": "img/Plasma_Bolt.png", "label": "Plasma Bolt", "shape": "image", "title": "GIHWR:55.2, avg_pick:5.89", "url": "UR_combo_network_Plasma_Bolt"}, {"color": "#97c2fc", "id": "Specimen Freighter", "image": "img/Specimen_Freighter.png", "label": "Specimen Freighter", "shape": "image", "title": "GIHWR:55.9, avg_pick:4.62", "url": "UR_combo_network_Specimen_Freighter"}, {"color": "#97c2fc", "id": "Uthros Scanship", "image": "img/Uthros_Scanship.png", "label": "Uthros Scanship", "shape": "image", "title": "GIHWR:56.6, avg_pick:5.38", "url": "UR_combo_network_Uthros_Scanship"}, {"color": "#97c2fc", "id": "Slagdrill Scrapper", "image": "img/Slagdrill_Scrapper.png", "label": "Slagdrill Scrapper", "shape": "image", "title": "GIHWR:53.8, avg_pick:9.75", "url": "UR_combo_network_Slagdrill_Scrapper"}, {"color": "#97c2fc", "id": "Kavaron Turbodrone", "image": "img/Kavaron_Turbodrone.png", "label": "Kavaron Turbodrone", "shape": "image", "title": "GIHWR:51.6, avg_pick:9.78", "url": "UR_combo_network_Kavaron_Turbodrone"}, {"color": "#97c2fc", "id": "Melded Moxite", "image": "img/Melded_Moxite.png", "label": "Melded Moxite", "shape": "image", "title": "GIHWR:55.8, avg_pick:8.57", "url": "UR_combo_network_Melded_Moxite"}, {"color": "#97c2fc", "id": "Orbital Plunge", "image": "img/Orbital_Plunge.png", "label": "Orbital Plunge", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.17", "url": "UR_combo_network_Orbital_Plunge"}, {"color": "#97c2fc", "id": "Invasive Maneuvers", "image": "img/Invasive_Maneuvers.png", "label": "Invasive Maneuvers", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.11", "url": "UR_combo_network_Invasive_Maneuvers"}, {"color": "#97c2fc", "id": "Terrapact Intimidator", "image": "img/Terrapact_Intimidator.png", "label": "Terrapact Intimidator", "shape": "image", "title": "GIHWR:59.5, avg_pick:3.06", "url": "UR_combo_network_Terrapact_Intimidator"}, {"color": "#97c2fc", "id": "Mechanozoa", "image": "img/Mechanozoa.png", "label": "Mechanozoa", "shape": "image", "title": "GIHWR:54.9, avg_pick:7.82", "url": "UR_combo_network_Mechanozoa"}, {"color": "#97c2fc", "id": "Cut Propulsion", "image": "img/Cut_Propulsion.png", "label": "Cut Propulsion", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.99", "url": "UR_combo_network_Cut_Propulsion"}, {"color": "#97c2fc", "id": "Kav Landseeker", "image": "img/Kav_Landseeker.png", "label": "Kav Landseeker", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.36", "url": "UR_combo_network_Kav_Landseeker"}, {"color": "#97c2fc", "id": "Zookeeper Mechan", "image": "img/Zookeeper_Mechan.png", "label": "Zookeeper Mechan", "shape": "image", "title": "GIHWR:55.9, avg_pick:5.78", "url": "UR_combo_network_Zookeeper_Mechan"}, {"color": "#97c2fc", "id": "Nanoform Sentinel", "image": "img/Nanoform_Sentinel.png", "label": "Nanoform Sentinel", "shape": "image", "title": "GIHWR:54.1, avg_pick:9.89", "url": "UR_combo_network_Nanoform_Sentinel"}, {"color": "#97c2fc", "id": "Kavaron Harrier", "image": "img/Kavaron_Harrier.png", "label": "Kavaron Harrier", "shape": "image", "title": "GIHWR:56.2, avg_pick:5.7", "url": "UR_combo_network_Kavaron_Harrier"}, {"color": "#97c2fc", "id": "Molecular Modifier", "image": "img/Molecular_Modifier.png", "label": "Molecular Modifier", "shape": "image", "title": "GIHWR:54.6, avg_pick:6.3", "url": "UR_combo_network_Molecular_Modifier"}, {"color": "#97c2fc", "id": "Territorial Bruntar", "image": "img/Territorial_Bruntar.png", "label": "Territorial Bruntar", "shape": "image", "title": "GIHWR:55.8, avg_pick:5.39", "url": "UR_combo_network_Territorial_Bruntar"}, {"color": "#97c2fc", "id": "Weftstalker Ardent", "image": "img/Weftstalker_Ardent.png", "label": "Weftstalker Ardent", "shape": "image", "title": "GIHWR:53.5, avg_pick:6.21", "url": "UR_combo_network_Weftstalker_Ardent"}, {"color": "#97c2fc", "id": "Debris Field Crusher", "image": "img/Debris_Field_Crusher.png", "label": "Debris Field Crusher", "shape": "image", "title": "GIHWR:52.2, avg_pick:6.47", "url": "UR_combo_network_Debris_Field_Crusher"}, {"color": "#97c2fc", "id": "Vaultguard Trooper", "image": "img/Vaultguard_Trooper.png", "label": "Vaultguard Trooper", "shape": "image", "title": "GIHWR:53.7, avg_pick:7.55", "url": "UR_combo_network_Vaultguard_Trooper"}, {"color": "#97c2fc", "id": "Systems Override", "image": "img/Systems_Override.png", "label": "Systems Override", "shape": "image", "title": "GIHWR:56.0, avg_pick:8.53", "url": "UR_combo_network_Systems_Override"}, {"color": "#97c2fc", "id": "Memorial Team Leader", "image": "img/Memorial_Team_Leader.png", "label": "Memorial Team Leader", "shape": "image", "title": "GIHWR:53.2, avg_pick:7.37", "url": "UR_combo_network_Memorial_Team_Leader"}]);
+                  edges = new vis.DataSet([{"from": "Cloudsculpt Technician", "label": "4.94", "title": "combo_ct:537, comboWR:56.24, combo+-:4.94, AB_AveWR:51.3", "to": "Annul", "value": 4.94}, {"from": "Cloudsculpt Technician", "label": "3.04", "title": "combo_ct:721, comboWR:55.89, combo+-:3.04, AB_AveWR:52.85", "to": "Scour for Scrap", "value": 3.04}, {"from": "Cloudsculpt Technician", "label": "4.13", "title": "combo_ct:1677, comboWR:59.03, combo+-:4.13, AB_AveWR:54.9", "to": "Tractor Beam", "value": 4.13}, {"from": "Annul", "label": "6.59", "title": "combo_ct:763, comboWR:61.99, combo+-:6.59, AB_AveWR:55.4", "to": "Codecracker Hound", "value": 6.59}, {"from": "Annul", "label": "4.36", "title": "combo_ct:1569, comboWR:59.46, combo+-:4.36, AB_AveWR:55.1", "to": "Cryogen Relic", "value": 4.36}, {"from": "Annul", "label": "3.44", "title": "combo_ct:591, comboWR:57.19, combo+-:3.44, AB_AveWR:53.75", "to": "Divert Disaster", "value": 3.44}, {"from": "Codecracker Hound", "label": "4.65", "title": "combo_ct:8258, comboWR:62.55, combo+-:4.65, AB_AveWR:57.9", "to": "Cryoshatter", "value": 4.65}, {"from": "Codecracker Hound", "label": "4.15", "title": "combo_ct:3794, comboWR:62.7, combo+-:4.15, AB_AveWR:58.55", "to": "Desculpting Blast", "value": 4.15}, {"from": "Codecracker Hound", "label": "5.51", "title": "combo_ct:4230, comboWR:63.66, combo+-:5.51, AB_AveWR:58.15", "to": "Divert Disaster", "value": 5.51}, {"from": "Codecracker Hound", "label": "4.77", "title": "combo_ct:3696, comboWR:63.07, combo+-:4.77, AB_AveWR:58.3", "to": "Gigastorm Titan", "value": 4.77}, {"from": "Codecracker Hound", "label": "3.73", "title": "combo_ct:3770, comboWR:60.93, combo+-:3.73, AB_AveWR:57.2", "to": "Illvoi Galeblade", "value": 3.73}, {"from": "Codecracker Hound", "label": "3.23", "title": "combo_ct:2953, comboWR:60.38, combo+-:3.23, AB_AveWR:57.15", "to": "Illvoi Infiltrator", "value": 3.23}, {"from": "Codecracker Hound", "label": "3.66", "title": "combo_ct:2039, comboWR:61.11, combo+-:3.66, AB_AveWR:57.45", "to": "Illvoi Light Jammer", "value": 3.66}, {"from": "Codecracker Hound", "label": "3.35", "title": "combo_ct:3562, comboWR:60.25, combo+-:3.35, AB_AveWR:56.9", "to": "Illvoi Operative", "value": 3.35}, {"from": "Codecracker Hound", "label": "3.11", "title": "combo_ct:5693, comboWR:61.11, combo+-:3.11, AB_AveWR:58.0", "to": "Lost in Space", "value": 3.11}, {"from": "Codecracker Hound", "label": "3.98", "title": "combo_ct:2513, comboWR:60.88, combo+-:3.98, AB_AveWR:56.9", "to": "Mechan Assembler", "value": 3.98}, {"from": "Codecracker Hound", "label": "3.09", "title": "combo_ct:3199, comboWR:60.64, combo+-:3.09, AB_AveWR:57.55", "to": "Mechan Navigator", "value": 3.09}, {"from": "Codecracker Hound", "label": "4.04", "title": "combo_ct:2578, comboWR:60.24, combo+-:4.04, AB_AveWR:56.2", "to": "Mechan Shieldmate", "value": 4.04}, {"from": "Codecracker Hound", "label": "3.65", "title": "combo_ct:2490, comboWR:60.2, combo+-:3.65, AB_AveWR:56.55", "to": "Mental Modulation", "value": 3.65}, {"from": "Codecracker Hound", "label": "4.65", "title": "combo_ct:3942, comboWR:63.65, combo+-:4.65, AB_AveWR:59.0", "to": "Mouth of the Storm", "value": 4.65}, {"from": "Codecracker Hound", "label": "3.84", "title": "combo_ct:1107, comboWR:60.79, combo+-:3.84, AB_AveWR:56.95", "to": "Scour for Scrap", "value": 3.84}, {"from": "Codecracker Hound", "label": "3.26", "title": "combo_ct:7044, comboWR:61.36, combo+-:3.26, AB_AveWR:58.1", "to": "Selfcraft Mechan", "value": 3.26}, {"from": "Codecracker Hound", "label": "4.14", "title": "combo_ct:4151, comboWR:63.14, combo+-:4.14, AB_AveWR:59.0", "to": "Tractor Beam", "value": 4.14}, {"from": "Codecracker Hound", "label": "4.63", "title": "combo_ct:1709, comboWR:62.08, combo+-:4.63, AB_AveWR:57.45", "to": "Unravel", "value": 4.63}, {"from": "Codecracker Hound", "label": "3.65", "title": "combo_ct:3513, comboWR:62.2, combo+-:3.65, AB_AveWR:58.55", "to": "Uthros Psionicist", "value": 3.65}, {"from": "Codecracker Hound", "label": "3.8", "title": "combo_ct:801, comboWR:61.8, combo+-:3.8, AB_AveWR:58.0", "to": "Nebula Dragon", "value": 3.8}, {"from": "Codecracker Hound", "label": "4.0", "title": "combo_ct:1265, comboWR:61.5, combo+-:4.0, AB_AveWR:57.5", "to": "Plasma Bolt", "value": 4.0}, {"from": "Cryogen Relic", "label": "3.03", "title": "combo_ct:7986, comboWR:60.88, combo+-:3.03, AB_AveWR:57.85", "to": "Divert Disaster", "value": 3.03}, {"from": "Cryogen Relic", "label": "3.37", "title": "combo_ct:7725, comboWR:61.37, combo+-:3.37, AB_AveWR:58.0", "to": "Gigastorm Titan", "value": 3.37}, {"from": "Cryogen Relic", "label": "3.61", "title": "combo_ct:4251, comboWR:60.76, combo+-:3.61, AB_AveWR:57.15", "to": "Illvoi Light Jammer", "value": 3.61}, {"from": "Cryogen Relic", "label": "3.09", "title": "combo_ct:10932, comboWR:60.79, combo+-:3.09, AB_AveWR:57.7", "to": "Lost in Space", "value": 3.09}, {"from": "Cryogen Relic", "label": "3.19", "title": "combo_ct:5799, comboWR:59.79, combo+-:3.19, AB_AveWR:56.6", "to": "Mechan Assembler", "value": 3.19}, {"from": "Cryogen Relic", "label": "3.87", "title": "combo_ct:8036, comboWR:62.57, combo+-:3.87, AB_AveWR:58.7", "to": "Mouth of the Storm", "value": 3.87}, {"from": "Cryogen Relic", "label": "3.52", "title": "combo_ct:2915, comboWR:60.17, combo+-:3.52, AB_AveWR:56.65", "to": "Scour for Scrap", "value": 3.52}, {"from": "Cryogen Relic", "label": "4.9", "title": "combo_ct:17656, comboWR:62.7, combo+-:4.9, AB_AveWR:57.8", "to": "Selfcraft Mechan", "value": 4.9}, {"from": "Cryogen Relic", "label": "3.38", "title": "combo_ct:5885, comboWR:60.93, combo+-:3.38, AB_AveWR:57.55", "to": "Specimen Freighter", "value": 3.38}, {"from": "Cryogen Relic", "label": "4.31", "title": "combo_ct:8791, comboWR:63.01, combo+-:4.31, AB_AveWR:58.7", "to": "Tractor Beam", "value": 4.31}, {"from": "Cryogen Relic", "label": "3.75", "title": "combo_ct:7506, comboWR:62.0, combo+-:3.75, AB_AveWR:58.25", "to": "Uthros Psionicist", "value": 3.75}, {"from": "Cryogen Relic", "label": "3.08", "title": "combo_ct:6291, comboWR:60.98, combo+-:3.08, AB_AveWR:57.9", "to": "Uthros Scanship", "value": 3.08}, {"from": "Cryogen Relic", "label": "3.88", "title": "combo_ct:2919, comboWR:61.08, combo+-:3.88, AB_AveWR:57.2", "to": "Plasma Bolt", "value": 3.88}, {"from": "Cryogen Relic", "label": "3.14", "title": "combo_ct:1913, comboWR:59.64, combo+-:3.14, AB_AveWR:56.5", "to": "Slagdrill Scrapper", "value": 3.14}, {"from": "Divert Disaster", "label": "4.72", "title": "combo_ct:2141, comboWR:59.97, combo+-:4.72, AB_AveWR:55.25", "to": "Mechan Assembler", "value": 4.72}, {"from": "Divert Disaster", "label": "4.04", "title": "combo_ct:3535, comboWR:61.39, combo+-:4.04, AB_AveWR:57.35", "to": "Mouth of the Storm", "value": 4.04}, {"from": "Divert Disaster", "label": "3.69", "title": "combo_ct:3427, comboWR:61.04, combo+-:3.69, AB_AveWR:57.35", "to": "Tractor Beam", "value": 3.69}, {"from": "Divert Disaster", "label": "4.02", "title": "combo_ct:2716, comboWR:60.57, combo+-:4.02, AB_AveWR:56.55", "to": "Uthros Scanship", "value": 4.02}, {"from": "Divert Disaster", "label": "3.37", "title": "combo_ct:1355, comboWR:60.22, combo+-:3.37, AB_AveWR:56.85", "to": "Orbital Plunge", "value": 3.37}, {"from": "Desculpting Blast", "label": "3.38", "title": "combo_ct:2300, comboWR:59.43, combo+-:3.38, AB_AveWR:56.05", "to": "Cerebral Download", "value": 3.38}, {"from": "Desculpting Blast", "label": "3.21", "title": "combo_ct:1653, comboWR:59.41, combo+-:3.21, AB_AveWR:56.2", "to": "Illvoi Light Jammer", "value": 3.21}, {"from": "Desculpting Blast", "label": "4.99", "title": "combo_ct:2167, comboWR:60.64, combo+-:4.99, AB_AveWR:55.65", "to": "Mechan Assembler", "value": 4.99}, {"from": "Desculpting Blast", "label": "3.2", "title": "combo_ct:3142, comboWR:60.95, combo+-:3.2, AB_AveWR:57.75", "to": "Mouth of the Storm", "value": 3.2}, {"from": "Desculpting Blast", "label": "3.47", "title": "combo_ct:5860, comboWR:60.32, combo+-:3.47, AB_AveWR:56.85", "to": "Selfcraft Mechan", "value": 3.47}, {"from": "Desculpting Blast", "label": "3.64", "title": "combo_ct:2432, comboWR:60.24, combo+-:3.64, AB_AveWR:56.6", "to": "Specimen Freighter", "value": 3.64}, {"from": "Desculpting Blast", "label": "3.66", "title": "combo_ct:2503, comboWR:60.61, combo+-:3.66, AB_AveWR:56.95", "to": "Uthros Scanship", "value": 3.66}, {"from": "Desculpting Blast", "label": "3.63", "title": "combo_ct:501, comboWR:58.08, combo+-:3.63, AB_AveWR:54.45", "to": "Kavaron Turbodrone", "value": 3.63}, {"from": "Desculpting Blast", "label": "3.27", "title": "combo_ct:988, comboWR:59.82, combo+-:3.27, AB_AveWR:56.55", "to": "Melded Moxite", "value": 3.27}, {"from": "Desculpting Blast", "label": "4.01", "title": "combo_ct:685, comboWR:59.56, combo+-:4.01, AB_AveWR:55.55", "to": "Slagdrill Scrapper", "value": 4.01}, {"from": "Cerebral Download", "label": "3.23", "title": "combo_ct:2262, comboWR:59.73, combo+-:3.23, AB_AveWR:56.5", "to": "Mouth of the Storm", "value": 3.23}, {"from": "Mouth of the Storm", "label": "4.49", "title": "combo_ct:4678, comboWR:61.69, combo+-:4.49, AB_AveWR:57.2", "to": "Lost in Space", "value": 4.49}, {"from": "Mouth of the Storm", "label": "3.22", "title": "combo_ct:822, comboWR:59.37, combo+-:3.22, AB_AveWR:56.15", "to": "Scour for Scrap", "value": 3.22}, {"from": "Mouth of the Storm", "label": "4.58", "title": "combo_ct:3420, comboWR:62.78, combo+-:4.58, AB_AveWR:58.2", "to": "Tractor Beam", "value": 4.58}, {"from": "Mouth of the Storm", "label": "3.04", "title": "combo_ct:1548, comboWR:59.69, combo+-:3.04, AB_AveWR:56.65", "to": "Unravel", "value": 3.04}, {"from": "Mouth of the Storm", "label": "3.89", "title": "combo_ct:3071, comboWR:61.64, combo+-:3.89, AB_AveWR:57.75", "to": "Uthros Psionicist", "value": 3.89}, {"from": "Mouth of the Storm", "label": "3.19", "title": "combo_ct:2700, comboWR:60.59, combo+-:3.19, AB_AveWR:57.4", "to": "Uthros Scanship", "value": 3.19}, {"from": "Mouth of the Storm", "label": "3.5", "title": "combo_ct:622, comboWR:60.45, combo+-:3.5, AB_AveWR:56.95", "to": "Cut Propulsion", "value": 3.5}, {"from": "Mouth of the Storm", "label": "3.81", "title": "combo_ct:1146, comboWR:60.91, combo+-:3.81, AB_AveWR:57.1", "to": "Kav Landseeker", "value": 3.81}, {"from": "Mouth of the Storm", "label": "4.23", "title": "combo_ct:975, comboWR:61.23, combo+-:4.23, AB_AveWR:57.0", "to": "Melded Moxite", "value": 4.23}, {"from": "Mouth of the Storm", "label": "4.71", "title": "combo_ct:1979, comboWR:62.41, combo+-:4.71, AB_AveWR:57.7", "to": "Orbital Plunge", "value": 4.71}, {"from": "Mouth of the Storm", "label": "5.05", "title": "combo_ct:983, comboWR:61.75, combo+-:5.05, AB_AveWR:56.7", "to": "Plasma Bolt", "value": 5.05}, {"from": "Mouth of the Storm", "label": "4.91", "title": "combo_ct:687, comboWR:63.76, combo+-:4.91, AB_AveWR:58.85", "to": "Terrapact Intimidator", "value": 4.91}, {"from": "Mouth of the Storm", "label": "4.82", "title": "combo_ct:1411, comboWR:61.87, combo+-:4.82, AB_AveWR:57.05", "to": "Zookeeper Mechan", "value": 4.82}, {"from": "Scour for Scrap", "label": "3.57", "title": "combo_ct:1279, comboWR:58.72, combo+-:3.57, AB_AveWR:55.15", "to": "Lost in Space", "value": 3.57}, {"from": "Scour for Scrap", "label": "4.78", "title": "combo_ct:1081, comboWR:59.48, combo+-:4.78, AB_AveWR:54.7", "to": "Mechan Navigator", "value": 4.78}, {"from": "Scour for Scrap", "label": "3.56", "title": "combo_ct:1209, comboWR:56.91, combo+-:3.56, AB_AveWR:53.35", "to": "Mechan Shieldmate", "value": 3.56}, {"from": "Scour for Scrap", "label": "5.18", "title": "combo_ct:1161, comboWR:61.33, combo+-:5.18, AB_AveWR:56.15", "to": "Tractor Beam", "value": 5.18}, {"from": "Scour for Scrap", "label": "3.39", "title": "combo_ct:607, comboWR:57.99, combo+-:3.39, AB_AveWR:54.6", "to": "Unravel", "value": 3.39}, {"from": "Scour for Scrap", "label": "5.36", "title": "combo_ct:904, comboWR:61.06, combo+-:5.36, AB_AveWR:55.7", "to": "Uthros Psionicist", "value": 5.36}, {"from": "Tractor Beam", "label": "4.45", "title": "combo_ct:3477, comboWR:61.95, combo+-:4.45, AB_AveWR:57.5", "to": "Gigastorm Titan", "value": 4.45}, {"from": "Tractor Beam", "label": "3.64", "title": "combo_ct:3619, comboWR:60.04, combo+-:3.64, AB_AveWR:56.4", "to": "Illvoi Galeblade", "value": 3.64}, {"from": "Tractor Beam", "label": "4.4", "title": "combo_ct:3009, comboWR:60.75, combo+-:4.4, AB_AveWR:56.35", "to": "Illvoi Infiltrator", "value": 4.4}, {"from": "Tractor Beam", "label": "4.16", "title": "combo_ct:2928, comboWR:60.31, combo+-:4.16, AB_AveWR:56.15", "to": "Nanoform Sentinel", "value": 4.16}, {"from": "Tractor Beam", "label": "4.1", "title": "combo_ct:6420, comboWR:61.4, combo+-:4.1, AB_AveWR:57.3", "to": "Selfcraft Mechan", "value": 4.1}, {"from": "Tractor Beam", "label": "3.64", "title": "combo_ct:861, comboWR:60.74, combo+-:3.64, AB_AveWR:57.1", "to": "Kav Landseeker", "value": 3.64}, {"from": "Tractor Beam", "label": "3.14", "title": "combo_ct:1001, comboWR:60.14, combo+-:3.14, AB_AveWR:57.0", "to": "Melded Moxite", "value": 3.14}, {"from": "Tractor Beam", "label": "3.45", "title": "combo_ct:587, comboWR:60.65, combo+-:3.45, AB_AveWR:57.2", "to": "Nebula Dragon", "value": 3.45}, {"from": "Tractor Beam", "label": "3.51", "title": "combo_ct:1575, comboWR:61.21, combo+-:3.51, AB_AveWR:57.7", "to": "Orbital Plunge", "value": 3.51}, {"from": "Tractor Beam", "label": "3.61", "title": "combo_ct:1023, comboWR:60.31, combo+-:3.61, AB_AveWR:56.7", "to": "Plasma Bolt", "value": 3.61}, {"from": "Tractor Beam", "label": "3.25", "title": "combo_ct:649, comboWR:62.1, combo+-:3.25, AB_AveWR:58.85", "to": "Terrapact Intimidator", "value": 3.25}, {"from": "Tractor Beam", "label": "3.58", "title": "combo_ct:1326, comboWR:60.63, combo+-:3.58, AB_AveWR:57.05", "to": "Zookeeper Mechan", "value": 3.58}, {"from": "Cryoshatter", "label": "3.06", "title": "combo_ct:6599, comboWR:59.46, combo+-:3.06, AB_AveWR:56.4", "to": "Gigastorm Titan", "value": 3.06}, {"from": "Gigastorm Titan", "label": "3.64", "title": "combo_ct:1715, comboWR:59.59, combo+-:3.64, AB_AveWR:55.95", "to": "Illvoi Light Jammer", "value": 3.64}, {"from": "Gigastorm Titan", "label": "3.46", "title": "combo_ct:4096, comboWR:59.96, combo+-:3.46, AB_AveWR:56.5", "to": "Lost in Space", "value": 3.46}, {"from": "Gigastorm Titan", "label": "4.21", "title": "combo_ct:2374, comboWR:60.91, combo+-:4.21, AB_AveWR:56.7", "to": "Uthros Scanship", "value": 4.21}, {"from": "Gigastorm Titan", "label": "3.24", "title": "combo_ct:875, comboWR:59.54, combo+-:3.24, AB_AveWR:56.3", "to": "Melded Moxite", "value": 3.24}, {"from": "Illvoi Infiltrator", "label": "3.05", "title": "combo_ct:1516, comboWR:57.85, combo+-:3.05, AB_AveWR:54.8", "to": "Illvoi Light Jammer", "value": 3.05}, {"from": "Illvoi Infiltrator", "label": "3.75", "title": "combo_ct:2548, comboWR:57.65, combo+-:3.75, AB_AveWR:53.9", "to": "Mental Modulation", "value": 3.75}, {"from": "Illvoi Light Jammer", "label": "3.61", "title": "combo_ct:3684, comboWR:59.36, combo+-:3.61, AB_AveWR:55.75", "to": "Selfcraft Mechan", "value": 3.61}, {"from": "Illvoi Light Jammer", "label": "4.13", "title": "combo_ct:819, comboWR:59.58, combo+-:4.13, AB_AveWR:55.45", "to": "Melded Moxite", "value": 4.13}, {"from": "Illvoi Light Jammer", "label": "4.08", "title": "combo_ct:1109, comboWR:60.23, combo+-:4.08, AB_AveWR:56.15", "to": "Orbital Plunge", "value": 4.08}, {"from": "Illvoi Light Jammer", "label": "3.45", "title": "combo_ct:658, comboWR:57.9, combo+-:3.45, AB_AveWR:54.45", "to": "Slagdrill Scrapper", "value": 3.45}, {"from": "Illvoi Operative", "label": "4.23", "title": "combo_ct:2283, comboWR:59.53, combo+-:4.23, AB_AveWR:55.3", "to": "Uthros Scanship", "value": 4.23}, {"from": "Lost in Space", "label": "3.08", "title": "combo_ct:7908, comboWR:59.38, combo+-:3.08, AB_AveWR:56.3", "to": "Selfcraft Mechan", "value": 3.08}, {"from": "Mechan Assembler", "label": "4.35", "title": "combo_ct:549, comboWR:59.2, combo+-:4.35, AB_AveWR:54.85", "to": "Invasive Maneuvers", "value": 4.35}, {"from": "Mechan Navigator", "label": "3.31", "title": "combo_ct:1852, comboWR:57.61, combo+-:3.31, AB_AveWR:54.3", "to": "Mental Modulation", "value": 3.31}, {"from": "Mechan Navigator", "label": "3.1", "title": "combo_ct:2162, comboWR:58.7, combo+-:3.1, AB_AveWR:55.6", "to": "Specimen Freighter", "value": 3.1}, {"from": "Mechan Navigator", "label": "4.05", "title": "combo_ct:2555, comboWR:60.0, combo+-:4.05, AB_AveWR:55.95", "to": "Uthros Scanship", "value": 4.05}, {"from": "Mechan Navigator", "label": "3.07", "title": "combo_ct:549, comboWR:60.47, combo+-:3.07, AB_AveWR:57.4", "to": "Terrapact Intimidator", "value": 3.07}, {"from": "Mechan Shieldmate", "label": "3.06", "title": "combo_ct:587, comboWR:59.11, combo+-:3.06, AB_AveWR:56.05", "to": "Terrapact Intimidator", "value": 3.06}, {"from": "Selfcraft Mechan", "label": "3.02", "title": "combo_ct:4599, comboWR:59.17, combo+-:3.02, AB_AveWR:56.15", "to": "Specimen Freighter", "value": 3.02}, {"from": "Selfcraft Mechan", "label": "5.52", "title": "combo_ct:1309, comboWR:61.57, combo+-:5.52, AB_AveWR:56.05", "to": "Cut Propulsion", "value": 5.52}, {"from": "Selfcraft Mechan", "label": "3.43", "title": "combo_ct:2792, comboWR:59.53, combo+-:3.43, AB_AveWR:56.1", "to": "Melded Moxite", "value": 3.43}, {"from": "Selfcraft Mechan", "label": "3.72", "title": "combo_ct:1093, comboWR:60.02, combo+-:3.72, AB_AveWR:56.3", "to": "Nebula Dragon", "value": 3.72}, {"from": "Selfcraft Mechan", "label": "3.61", "title": "combo_ct:3678, comboWR:60.41, combo+-:3.61, AB_AveWR:56.8", "to": "Orbital Plunge", "value": 3.61}, {"from": "Selfcraft Mechan", "label": "3.61", "title": "combo_ct:2678, comboWR:59.41, combo+-:3.61, AB_AveWR:55.8", "to": "Plasma Bolt", "value": 3.61}, {"from": "Selfcraft Mechan", "label": "3.62", "title": "combo_ct:1790, comboWR:58.72, combo+-:3.62, AB_AveWR:55.1", "to": "Slagdrill Scrapper", "value": 3.62}, {"from": "Unravel", "label": "3.88", "title": "combo_ct:1269, comboWR:59.73, combo+-:3.88, AB_AveWR:55.85", "to": "Uthros Scanship", "value": 3.88}, {"from": "Uthros Psionicist", "label": "3.63", "title": "combo_ct:2293, comboWR:60.23, combo+-:3.63, AB_AveWR:56.6", "to": "Specimen Freighter", "value": 3.63}, {"from": "Uthros Psionicist", "label": "3.91", "title": "combo_ct:2394, comboWR:60.86, combo+-:3.91, AB_AveWR:56.95", "to": "Uthros Scanship", "value": 3.91}, {"from": "Uthros Psionicist", "label": "5.33", "title": "combo_ct:745, comboWR:61.88, combo+-:5.33, AB_AveWR:56.55", "to": "Melded Moxite", "value": 5.33}, {"from": "Uthros Psionicist", "label": "3.11", "title": "combo_ct:1284, comboWR:60.36, combo+-:3.11, AB_AveWR:57.25", "to": "Orbital Plunge", "value": 3.11}, {"from": "Nebula Dragon", "label": "5.11", "title": "combo_ct:1831, comboWR:61.06, combo+-:5.11, AB_AveWR:55.95", "to": "Cut Propulsion", "value": 5.11}, {"from": "Nebula Dragon", "label": "3.81", "title": "combo_ct:4422, comboWR:59.91, combo+-:3.81, AB_AveWR:56.1", "to": "Kav Landseeker", "value": 3.81}, {"from": "Nebula Dragon", "label": "3.97", "title": "combo_ct:1037, comboWR:60.17, combo+-:3.97, AB_AveWR:56.2", "to": "Kavaron Harrier", "value": 3.97}, {"from": "Nebula Dragon", "label": "4.17", "title": "combo_ct:5421, comboWR:60.87, combo+-:4.17, AB_AveWR:56.7", "to": "Orbital Plunge", "value": 4.17}, {"from": "Nebula Dragon", "label": "4.08", "title": "combo_ct:2448, comboWR:61.93, combo+-:4.08, AB_AveWR:57.85", "to": "Terrapact Intimidator", "value": 4.08}, {"from": "Nebula Dragon", "label": "4.05", "title": "combo_ct:4521, comboWR:60.1, combo+-:4.05, AB_AveWR:56.05", "to": "Zookeeper Mechan", "value": 4.05}, {"from": "Plasma Bolt", "label": "3.24", "title": "combo_ct:1858, comboWR:58.29, combo+-:3.24, AB_AveWR:55.05", "to": "Mechanozoa", "value": 3.24}, {"from": "Plasma Bolt", "label": "4.19", "title": "combo_ct:922, comboWR:60.09, combo+-:4.19, AB_AveWR:55.9", "to": "Uthros Scanship", "value": 4.19}, {"from": "Plasma Bolt", "label": "3.51", "title": "combo_ct:4839, comboWR:60.86, combo+-:3.51, AB_AveWR:57.35", "to": "Terrapact Intimidator", "value": 3.51}, {"from": "Specimen Freighter", "label": "3.06", "title": "combo_ct:2289, comboWR:58.06, combo+-:3.06, AB_AveWR:55.0", "to": "Nanoform Sentinel", "value": 3.06}, {"from": "Specimen Freighter", "label": "3.85", "title": "combo_ct:552, comboWR:58.7, combo+-:3.85, AB_AveWR:54.85", "to": "Slagdrill Scrapper", "value": 3.85}, {"from": "Specimen Freighter", "label": "5.46", "title": "combo_ct:570, comboWR:63.16, combo+-:5.46, AB_AveWR:57.7", "to": "Terrapact Intimidator", "value": 5.46}, {"from": "Specimen Freighter", "label": "3.01", "title": "combo_ct:1212, comboWR:58.91, combo+-:3.01, AB_AveWR:55.9", "to": "Zookeeper Mechan", "value": 3.01}, {"from": "Uthros Scanship", "label": "3.48", "title": "combo_ct:2621, comboWR:58.83, combo+-:3.48, AB_AveWR:55.35", "to": "Nanoform Sentinel", "value": 3.48}, {"from": "Uthros Scanship", "label": "5.81", "title": "combo_ct:510, comboWR:61.96, combo+-:5.81, AB_AveWR:56.15", "to": "Invasive Maneuvers", "value": 5.81}, {"from": "Slagdrill Scrapper", "label": "3.01", "title": "combo_ct:1939, comboWR:57.76, combo+-:3.01, AB_AveWR:54.75", "to": "Cut Propulsion", "value": 3.01}, {"from": "Slagdrill Scrapper", "label": "3.3", "title": "combo_ct:4803, comboWR:58.8, combo+-:3.3, AB_AveWR:55.5", "to": "Orbital Plunge", "value": 3.3}, {"from": "Slagdrill Scrapper", "label": "3.32", "title": "combo_ct:2313, comboWR:59.97, combo+-:3.32, AB_AveWR:56.65", "to": "Terrapact Intimidator", "value": 3.32}, {"from": "Kavaron Turbodrone", "label": "3.15", "title": "combo_ct:929, comboWR:56.4, combo+-:3.15, AB_AveWR:53.25", "to": "Mechanozoa", "value": 3.15}, {"from": "Melded Moxite", "label": "3.57", "title": "combo_ct:2984, comboWR:59.32, combo+-:3.57, AB_AveWR:55.75", "to": "Cut Propulsion", "value": 3.57}, {"from": "Orbital Plunge", "label": "3.05", "title": "combo_ct:4689, comboWR:59.5, combo+-:3.05, AB_AveWR:56.45", "to": "Cut Propulsion", "value": 3.05}, {"from": "Orbital Plunge", "label": "4.12", "title": "combo_ct:6073, comboWR:62.47, combo+-:4.12, AB_AveWR:58.35", "to": "Terrapact Intimidator", "value": 4.12}, {"from": "Orbital Plunge", "label": "3.17", "title": "combo_ct:4379, comboWR:59.67, combo+-:3.17, AB_AveWR:56.5", "to": "Territorial Bruntar", "value": 3.17}, {"from": "Orbital Plunge", "label": "3.47", "title": "combo_ct:2484, comboWR:58.82, combo+-:3.47, AB_AveWR:55.35", "to": "Weftstalker Ardent", "value": 3.47}, {"from": "Orbital Plunge", "label": "3.57", "title": "combo_ct:11905, comboWR:60.12, combo+-:3.57, AB_AveWR:56.55", "to": "Zookeeper Mechan", "value": 3.57}, {"from": "Invasive Maneuvers", "label": "3.57", "title": "combo_ct:919, comboWR:58.87, combo+-:3.57, AB_AveWR:55.3", "to": "Mechanozoa", "value": 3.57}, {"from": "Invasive Maneuvers", "label": "3.07", "title": "combo_ct:3569, comboWR:58.92, combo+-:3.07, AB_AveWR:55.85", "to": "Kav Landseeker", "value": 3.07}, {"from": "Invasive Maneuvers", "label": "3.82", "title": "combo_ct:2219, comboWR:61.42, combo+-:3.82, AB_AveWR:57.6", "to": "Terrapact Intimidator", "value": 3.82}, {"from": "Terrapact Intimidator", "label": "6.07", "title": "combo_ct:2455, comboWR:63.67, combo+-:6.07, AB_AveWR:57.6", "to": "Cut Propulsion", "value": 6.07}, {"from": "Terrapact Intimidator", "label": "6.46", "title": "combo_ct:1125, comboWR:62.31, combo+-:6.46, AB_AveWR:55.85", "to": "Debris Field Crusher", "value": 6.46}, {"from": "Terrapact Intimidator", "label": "3.09", "title": "combo_ct:1102, comboWR:59.44, combo+-:3.09, AB_AveWR:56.35", "to": "Memorial Team Leader", "value": 3.09}, {"from": "Terrapact Intimidator", "label": "4.58", "title": "combo_ct:807, comboWR:62.33, combo+-:4.58, AB_AveWR:57.75", "to": "Systems Override", "value": 4.58}, {"from": "Terrapact Intimidator", "label": "3.98", "title": "combo_ct:2020, comboWR:61.63, combo+-:3.98, AB_AveWR:57.65", "to": "Territorial Bruntar", "value": 3.98}, {"from": "Terrapact Intimidator", "label": "4.27", "title": "combo_ct:1352, comboWR:60.87, combo+-:4.27, AB_AveWR:56.6", "to": "Vaultguard Trooper", "value": 4.27}, {"from": "Terrapact Intimidator", "label": "4.56", "title": "combo_ct:1279, comboWR:61.06, combo+-:4.56, AB_AveWR:56.5", "to": "Weftstalker Ardent", "value": 4.56}, {"from": "Cut Propulsion", "label": "4.04", "title": "combo_ct:526, comboWR:58.94, combo+-:4.04, AB_AveWR:54.9", "to": "Nanoform Sentinel", "value": 4.04}, {"from": "Cut Propulsion", "label": "3.26", "title": "combo_ct:3786, comboWR:59.11, combo+-:3.26, AB_AveWR:55.85", "to": "Kav Landseeker", "value": 3.26}, {"from": "Cut Propulsion", "label": "3.09", "title": "combo_ct:1499, comboWR:59.04, combo+-:3.09, AB_AveWR:55.95", "to": "Kavaron Harrier", "value": 3.09}, {"from": "Cut Propulsion", "label": "3.04", "title": "combo_ct:1416, comboWR:58.19, combo+-:3.04, AB_AveWR:55.15", "to": "Molecular Modifier", "value": 3.04}, {"from": "Cut Propulsion", "label": "4.38", "title": "combo_ct:1653, comboWR:60.13, combo+-:4.38, AB_AveWR:55.75", "to": "Territorial Bruntar", "value": 4.38}, {"from": "Cut Propulsion", "label": "3.4", "title": "combo_ct:1081, comboWR:58.0, combo+-:3.4, AB_AveWR:54.6", "to": "Weftstalker Ardent", "value": 3.4}, {"from": "Cut Propulsion", "label": "3.02", "title": "combo_ct:4728, comboWR:58.82, combo+-:3.02, AB_AveWR:55.8", "to": "Zookeeper Mechan", "value": 3.02}, {"from": "Kav Landseeker", "label": "4.98", "title": "combo_ct:1148, comboWR:60.98, combo+-:4.98, AB_AveWR:56.0", "to": "Systems Override", "value": 4.98}, {"from": "Molecular Modifier", "label": "5.67", "title": "combo_ct:987, comboWR:59.57, combo+-:5.67, AB_AveWR:53.9", "to": "Memorial Team Leader", "value": 5.67}, {"from": "Weftstalker Ardent", "label": "4.2", "title": "combo_ct:645, comboWR:57.05, combo+-:4.2, AB_AveWR:52.85", "to": "Debris Field Crusher", "value": 4.2}, {"from": "Debris Field Crusher", "label": "5.07", "title": "combo_ct:648, comboWR:58.02, combo+-:5.07, AB_AveWR:52.95", "to": "Vaultguard Trooper", "value": 5.07}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

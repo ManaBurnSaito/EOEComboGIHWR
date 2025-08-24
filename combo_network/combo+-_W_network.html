@@ -1,0 +1,404 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Banishing Light">Banishing Light</option>
+                                
+                                    <option value="All-Fates Stalker">All-Fates Stalker</option>
+                                
+                                    <option value="Brightspear Zealot">Brightspear Zealot</option>
+                                
+                                    <option value="Dockworker Drone">Dockworker Drone</option>
+                                
+                                    <option value="Focus Fire">Focus Fire</option>
+                                
+                                    <option value="Honored Knight-Captain">Honored Knight-Captain</option>
+                                
+                                    <option value="Knight Luminary">Knight Luminary</option>
+                                
+                                    <option value="Rayblade Trooper">Rayblade Trooper</option>
+                                
+                                    <option value="Reroute Systems">Reroute Systems</option>
+                                
+                                    <option value="Rescue Skiff">Rescue Skiff</option>
+                                
+                                    <option value="Sunstar Lightsmith">Sunstar Lightsmith</option>
+                                
+                                    <option value="Flight-Deck Coordinator">Flight-Deck Coordinator</option>
+                                
+                                    <option value="Starfield Shepherd">Starfield Shepherd</option>
+                                
+                                    <option value="Sunstar Expansionist">Sunstar Expansionist</option>
+                                
+                                    <option value="Squire's Lightblade">Squire's Lightblade</option>
+                                
+                                    <option value="Emergency Eject">Emergency Eject</option>
+                                
+                                    <option value="Dawnstrike Vanguard">Dawnstrike Vanguard</option>
+                                
+                                    <option value="Dual-Sun Adepts">Dual-Sun Adepts</option>
+                                
+                                    <option value="Dual-Sun Technique">Dual-Sun Technique</option>
+                                
+                                    <option value="Honor">Honor</option>
+                                
+                                    <option value="Wedgelight Rammer">Wedgelight Rammer</option>
+                                
+                                    <option value="Starport Security">Starport Security</option>
+                                
+                                    <option value="Luxknight Breacher">Luxknight Breacher</option>
+                                
+                                    <option value="Radiant Strike">Radiant Strike</option>
+                                
+                                    <option value="Seam Rip">Seam Rip</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Banishing Light", "image": "img/Banishing_Light.png", "label": "Banishing Light", "shape": "image", "title": "GIHWR:58.2, avg_pick:3.94", "url": "W_combo_network_Banishing_Light"}, {"color": "#97c2fc", "id": "All-Fates Stalker", "image": "img/All-Fates_Stalker.png", "label": "All-Fates Stalker", "shape": "image", "title": "GIHWR:59.8, avg_pick:2.96", "url": "W_combo_network_All-Fates_Stalker"}, {"color": "#97c2fc", "id": "Brightspear Zealot", "image": "img/Brightspear_Zealot.png", "label": "Brightspear Zealot", "shape": "image", "title": "GIHWR:53.3, avg_pick:10.32", "url": "W_combo_network_Brightspear_Zealot"}, {"color": "#97c2fc", "id": "Dockworker Drone", "image": "img/Dockworker_Drone.png", "label": "Dockworker Drone", "shape": "image", "title": "GIHWR:54.4, avg_pick:7.12", "url": "W_combo_network_Dockworker_Drone"}, {"color": "#97c2fc", "id": "Focus Fire", "image": "img/Focus_Fire.png", "label": "Focus Fire", "shape": "image", "title": "GIHWR:57.0, avg_pick:6.55", "url": "W_combo_network_Focus_Fire"}, {"color": "#97c2fc", "id": "Honored Knight-Captain", "image": "img/Honored_Knight-Captain.png", "label": "Honored Knight-Captain", "shape": "image", "title": "GIHWR:56.3, avg_pick:5.08", "url": "W_combo_network_Honored_Knight-Captain"}, {"color": "#97c2fc", "id": "Knight Luminary", "image": "img/Knight_Luminary.png", "label": "Knight Luminary", "shape": "image", "title": "GIHWR:57.5, avg_pick:6.05", "url": "W_combo_network_Knight_Luminary"}, {"color": "#97c2fc", "id": "Rayblade Trooper", "image": "img/Rayblade_Trooper.png", "label": "Rayblade Trooper", "shape": "image", "title": "GIHWR:58.5, avg_pick:3.47", "url": "W_combo_network_Rayblade_Trooper"}, {"color": "#97c2fc", "id": "Reroute Systems", "image": "img/Reroute_Systems.png", "label": "Reroute Systems", "shape": "image", "title": "GIHWR:52.3, avg_pick:6.95", "url": "W_combo_network_Reroute_Systems"}, {"color": "#97c2fc", "id": "Rescue Skiff", "image": "img/Rescue_Skiff.png", "label": "Rescue Skiff", "shape": "image", "title": "GIHWR:53.1, avg_pick:6.0", "url": "W_combo_network_Rescue_Skiff"}, {"color": "#97c2fc", "id": "Sunstar Lightsmith", "image": "img/Sunstar_Lightsmith.png", "label": "Sunstar Lightsmith", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.09", "url": "W_combo_network_Sunstar_Lightsmith"}, {"color": "#97c2fc", "id": "Flight-Deck Coordinator", "image": "img/Flight-Deck_Coordinator.png", "label": "Flight-Deck Coordinator", "shape": "image", "title": "GIHWR:54.1, avg_pick:10.14", "url": "W_combo_network_Flight-Deck_Coordinator"}, {"color": "#97c2fc", "id": "Starfield Shepherd", "image": "img/Starfield_Shepherd.png", "label": "Starfield Shepherd", "shape": "image", "title": "GIHWR:58.6, avg_pick:3.14", "url": "W_combo_network_Starfield_Shepherd"}, {"color": "#97c2fc", "id": "Sunstar Expansionist", "image": "img/Sunstar_Expansionist.png", "label": "Sunstar Expansionist", "shape": "image", "title": "GIHWR:57.5, avg_pick:3.78", "url": "W_combo_network_Sunstar_Expansionist"}, {"color": "#97c2fc", "id": "Squire\u0027s Lightblade", "image": "img/Squire\u0027s_Lightblade.png", "label": "Squire\u0027s Lightblade", "shape": "image", "title": "GIHWR:53.5, avg_pick:11.03", "url": "W_combo_network_Squire\u0027s_Lightblade"}, {"color": "#97c2fc", "id": "Emergency Eject", "image": "img/Emergency_Eject.png", "label": "Emergency Eject", "shape": "image", "title": "GIHWR:53.6, avg_pick:5.5", "url": "W_combo_network_Emergency_Eject"}, {"color": "#97c2fc", "id": "Dawnstrike Vanguard", "image": "img/Dawnstrike_Vanguard.png", "label": "Dawnstrike Vanguard", "shape": "image", "title": "GIHWR:52.3, avg_pick:5.67", "url": "W_combo_network_Dawnstrike_Vanguard"}, {"color": "#97c2fc", "id": "Dual-Sun Adepts", "image": "img/Dual-Sun_Adepts.png", "label": "Dual-Sun Adepts", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.49", "url": "W_combo_network_Dual-Sun_Adepts"}, {"color": "#97c2fc", "id": "Dual-Sun Technique", "image": "img/Dual-Sun_Technique.png", "label": "Dual-Sun Technique", "shape": "image", "title": "GIHWR:51.1, avg_pick:8.41", "url": "W_combo_network_Dual-Sun_Technique"}, {"color": "#97c2fc", "id": "Honor", "image": "img/Honor.png", "label": "Honor", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.0", "url": "W_combo_network_Honor"}, {"color": "#97c2fc", "id": "Wedgelight Rammer", "image": "img/Wedgelight_Rammer.png", "label": "Wedgelight Rammer", "shape": "image", "title": "GIHWR:54.2, avg_pick:5.65", "url": "W_combo_network_Wedgelight_Rammer"}, {"color": "#97c2fc", "id": "Starport Security", "image": "img/Starport_Security.png", "label": "Starport Security", "shape": "image", "title": "GIHWR:53.7, avg_pick:9.64", "url": "W_combo_network_Starport_Security"}, {"color": "#97c2fc", "id": "Luxknight Breacher", "image": "img/Luxknight_Breacher.png", "label": "Luxknight Breacher", "shape": "image", "title": "GIHWR:51.7, avg_pick:9.97", "url": "W_combo_network_Luxknight_Breacher"}, {"color": "#97c2fc", "id": "Radiant Strike", "image": "img/Radiant_Strike.png", "label": "Radiant Strike", "shape": "image", "title": "GIHWR:55.5, avg_pick:7.52", "url": "W_combo_network_Radiant_Strike"}, {"color": "#97c2fc", "id": "Seam Rip", "image": "img/Seam_Rip.png", "label": "Seam Rip", "shape": "image", "title": "GIHWR:54.2, avg_pick:6.94", "url": "W_combo_network_Seam_Rip"}]);
+                  edges = new vis.DataSet([{"from": "Banishing Light", "label": "3.33", "title": "combo_ct:5355, comboWR:62.33, combo+-:3.33, AB_AveWR:59.0", "to": "All-Fates Stalker", "value": 3.33}, {"from": "Banishing Light", "label": "3.34", "title": "combo_ct:2513, comboWR:59.09, combo+-:3.34, AB_AveWR:55.75", "to": "Brightspear Zealot", "value": 3.34}, {"from": "Banishing Light", "label": "3.97", "title": "combo_ct:11015, comboWR:61.82, combo+-:3.97, AB_AveWR:57.85", "to": "Knight Luminary", "value": 3.97}, {"from": "Banishing Light", "label": "4.6", "title": "combo_ct:5133, comboWR:63.0, combo+-:4.6, AB_AveWR:58.4", "to": "Starfield Shepherd", "value": 4.6}, {"from": "Banishing Light", "label": "3.21", "title": "combo_ct:4854, comboWR:61.06, combo+-:3.21, AB_AveWR:57.85", "to": "Sunstar Expansionist", "value": 3.21}, {"from": "Banishing Light", "label": "4.17", "title": "combo_ct:4996, comboWR:61.57, combo+-:4.17, AB_AveWR:57.4", "to": "Sunstar Lightsmith", "value": 4.17}, {"from": "All-Fates Stalker", "label": "3.25", "title": "combo_ct:1286, comboWR:59.8, combo+-:3.25, AB_AveWR:56.55", "to": "Brightspear Zealot", "value": 3.25}, {"from": "All-Fates Stalker", "label": "3.05", "title": "combo_ct:4083, comboWR:60.15, combo+-:3.05, AB_AveWR:57.1", "to": "Dockworker Drone", "value": 3.05}, {"from": "All-Fates Stalker", "label": "3.46", "title": "combo_ct:4853, comboWR:61.86, combo+-:3.46, AB_AveWR:58.4", "to": "Focus Fire", "value": 3.46}, {"from": "All-Fates Stalker", "label": "4.1", "title": "combo_ct:2008, comboWR:62.15, combo+-:4.1, AB_AveWR:58.05", "to": "Honored Knight-Captain", "value": 4.1}, {"from": "All-Fates Stalker", "label": "3.84", "title": "combo_ct:5583, comboWR:62.49, combo+-:3.84, AB_AveWR:58.65", "to": "Knight Luminary", "value": 3.84}, {"from": "All-Fates Stalker", "label": "4.24", "title": "combo_ct:2338, comboWR:63.39, combo+-:4.24, AB_AveWR:59.15", "to": "Rayblade Trooper", "value": 4.24}, {"from": "All-Fates Stalker", "label": "3.29", "title": "combo_ct:1114, comboWR:59.34, combo+-:3.29, AB_AveWR:56.05", "to": "Reroute Systems", "value": 3.29}, {"from": "All-Fates Stalker", "label": "3.77", "title": "combo_ct:1003, comboWR:60.22, combo+-:3.77, AB_AveWR:56.45", "to": "Rescue Skiff", "value": 3.77}, {"from": "All-Fates Stalker", "label": "3.99", "title": "combo_ct:2396, comboWR:62.19, combo+-:3.99, AB_AveWR:58.2", "to": "Sunstar Lightsmith", "value": 3.99}, {"from": "Brightspear Zealot", "label": "11.02", "title": "combo_ct:520, comboWR:64.42, combo+-:11.02, AB_AveWR:53.4", "to": "Squire\u0027s Lightblade", "value": 11.02}, {"from": "Dockworker Drone", "label": "3.27", "title": "combo_ct:4454, comboWR:59.72, combo+-:3.27, AB_AveWR:56.45", "to": "Rayblade Trooper", "value": 3.27}, {"from": "Focus Fire", "label": "3.88", "title": "combo_ct:10653, comboWR:61.13, combo+-:3.88, AB_AveWR:57.25", "to": "Knight Luminary", "value": 3.88}, {"from": "Focus Fire", "label": "3.54", "title": "combo_ct:4678, comboWR:61.29, combo+-:3.54, AB_AveWR:57.75", "to": "Rayblade Trooper", "value": 3.54}, {"from": "Honored Knight-Captain", "label": "3.34", "title": "combo_ct:1900, comboWR:59.79, combo+-:3.34, AB_AveWR:56.45", "to": "Sunstar Lightsmith", "value": 3.34}, {"from": "Rayblade Trooper", "label": "3.23", "title": "combo_ct:741, comboWR:58.03, combo+-:3.23, AB_AveWR:54.8", "to": "Dual-Sun Technique", "value": 3.23}, {"from": "Rayblade Trooper", "label": "3.18", "title": "combo_ct:1878, comboWR:60.28, combo+-:3.18, AB_AveWR:57.1", "to": "Honor", "value": 3.18}, {"from": "Rayblade Trooper", "label": "3.51", "title": "combo_ct:615, comboWR:59.51, combo+-:3.51, AB_AveWR:56.0", "to": "Squire\u0027s Lightblade", "value": 3.51}, {"from": "Rayblade Trooper", "label": "4.34", "title": "combo_ct:1048, comboWR:60.69, combo+-:4.34, AB_AveWR:56.35", "to": "Wedgelight Rammer", "value": 4.34}, {"from": "Reroute Systems", "label": "3.44", "title": "combo_ct:1235, comboWR:57.89, combo+-:3.44, AB_AveWR:54.45", "to": "Sunstar Lightsmith", "value": 3.44}, {"from": "Rescue Skiff", "label": "5.35", "title": "combo_ct:678, comboWR:58.7, combo+-:5.35, AB_AveWR:53.35", "to": "Emergency Eject", "value": 5.35}, {"from": "Rescue Skiff", "label": "4.38", "title": "combo_ct:545, comboWR:57.98, combo+-:4.38, AB_AveWR:53.6", "to": "Flight-Deck Coordinator", "value": 4.38}, {"from": "Sunstar Lightsmith", "label": "3.05", "title": "combo_ct:1854, comboWR:59.65, combo+-:3.05, AB_AveWR:56.6", "to": "Dual-Sun Adepts", "value": 3.05}, {"from": "Sunstar Lightsmith", "label": "6.75", "title": "combo_ct:637, comboWR:60.6, combo+-:6.75, AB_AveWR:53.85", "to": "Dual-Sun Technique", "value": 6.75}, {"from": "Sunstar Lightsmith", "label": "3.4", "title": "combo_ct:1171, comboWR:58.5, combo+-:3.4, AB_AveWR:55.1", "to": "Emergency Eject", "value": 3.4}, {"from": "Sunstar Lightsmith", "label": "4.58", "title": "combo_ct:2088, comboWR:60.73, combo+-:4.58, AB_AveWR:56.15", "to": "Honor", "value": 4.58}, {"from": "Sunstar Lightsmith", "label": "3.94", "title": "combo_ct:1205, comboWR:59.34, combo+-:3.94, AB_AveWR:55.4", "to": "Seam Rip", "value": 3.94}, {"from": "Sunstar Lightsmith", "label": "3.85", "title": "combo_ct:2475, comboWR:61.45, combo+-:3.85, AB_AveWR:57.6", "to": "Starfield Shepherd", "value": 3.85}, {"from": "Sunstar Lightsmith", "label": "3.22", "title": "combo_ct:2268, comboWR:60.27, combo+-:3.22, AB_AveWR:57.05", "to": "Sunstar Expansionist", "value": 3.22}, {"from": "Flight-Deck Coordinator", "label": "4.19", "title": "combo_ct:785, comboWR:58.34, combo+-:4.19, AB_AveWR:54.15", "to": "Wedgelight Rammer", "value": 4.19}, {"from": "Starfield Shepherd", "label": "4.83", "title": "combo_ct:1128, comboWR:60.28, combo+-:4.83, AB_AveWR:55.45", "to": "Dawnstrike Vanguard", "value": 4.83}, {"from": "Starfield Shepherd", "label": "3.46", "title": "combo_ct:1092, comboWR:58.61, combo+-:3.46, AB_AveWR:55.15", "to": "Luxknight Breacher", "value": 3.46}, {"from": "Starfield Shepherd", "label": "4.06", "title": "combo_ct:3536, comboWR:61.11, combo+-:4.06, AB_AveWR:57.05", "to": "Radiant Strike", "value": 4.06}, {"from": "Starfield Shepherd", "label": "4.18", "title": "combo_ct:621, comboWR:60.23, combo+-:4.18, AB_AveWR:56.05", "to": "Squire\u0027s Lightblade", "value": 4.18}, {"from": "Sunstar Expansionist", "label": "3.64", "title": "combo_ct:1020, comboWR:58.24, combo+-:3.64, AB_AveWR:54.6", "to": "Luxknight Breacher", "value": 3.64}, {"from": "Sunstar Expansionist", "label": "3.17", "title": "combo_ct:3127, comboWR:59.67, combo+-:3.17, AB_AveWR:56.5", "to": "Radiant Strike", "value": 3.17}, {"from": "Sunstar Expansionist", "label": "5.08", "title": "combo_ct:1011, comboWR:60.93, combo+-:5.08, AB_AveWR:55.85", "to": "Seam Rip", "value": 5.08}, {"from": "Sunstar Expansionist", "label": "3.29", "title": "combo_ct:626, comboWR:58.79, combo+-:3.29, AB_AveWR:55.5", "to": "Squire\u0027s Lightblade", "value": 3.29}, {"from": "Emergency Eject", "label": "4.49", "title": "combo_ct:665, comboWR:57.44, combo+-:4.49, AB_AveWR:52.95", "to": "Dawnstrike Vanguard", "value": 4.49}, {"from": "Emergency Eject", "label": "3.27", "title": "combo_ct:751, comboWR:57.92, combo+-:3.27, AB_AveWR:54.65", "to": "Honor", "value": 3.27}, {"from": "Emergency Eject", "label": "3.15", "title": "combo_ct:638, comboWR:57.05, combo+-:3.15, AB_AveWR:53.9", "to": "Wedgelight Rammer", "value": 3.15}, {"from": "Honor", "label": "3.71", "title": "combo_ct:1546, comboWR:58.41, combo+-:3.71, AB_AveWR:54.7", "to": "Starport Security", "value": 3.71}, {"from": "Wedgelight Rammer", "label": "3.08", "title": "combo_ct:910, comboWR:57.03, combo+-:3.08, AB_AveWR:53.95", "to": "Starport Security", "value": 3.08}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

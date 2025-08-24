@@ -1,0 +1,454 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Terrapact Intimidator">Terrapact Intimidator</option>
+                                
+                                    <option value="Bombard">Bombard</option>
+                                
+                                    <option value="Eusocial Engineering">Eusocial Engineering</option>
+                                
+                                    <option value="Kav Landseeker">Kav Landseeker</option>
+                                
+                                    <option value="Cut Propulsion">Cut Propulsion</option>
+                                
+                                    <option value="Kavaron Harrier">Kavaron Harrier</option>
+                                
+                                    <option value="Kavaron Skywarden">Kavaron Skywarden</option>
+                                
+                                    <option value="Melded Moxite">Melded Moxite</option>
+                                
+                                    <option value="Molecular Modifier">Molecular Modifier</option>
+                                
+                                    <option value="Nebula Dragon">Nebula Dragon</option>
+                                
+                                    <option value="Orbital Plunge">Orbital Plunge</option>
+                                
+                                    <option value="Slagdrill Scrapper">Slagdrill Scrapper</option>
+                                
+                                    <option value="Territorial Bruntar">Territorial Bruntar</option>
+                                
+                                    <option value="Weftstalker Ardent">Weftstalker Ardent</option>
+                                
+                                    <option value="Zookeeper Mechan">Zookeeper Mechan</option>
+                                
+                                    <option value="Eumidian Terrabotanist">Eumidian Terrabotanist</option>
+                                
+                                    <option value="Galactic Wayfarer">Galactic Wayfarer</option>
+                                
+                                    <option value="Glacier Godmaw">Glacier Godmaw</option>
+                                
+                                    <option value="Harmonious Grovestrider">Harmonious Grovestrider</option>
+                                
+                                    <option value="Icecave Crasher">Icecave Crasher</option>
+                                
+                                    <option value="Larval Scoutlander">Larval Scoutlander</option>
+                                
+                                    <option value="Seedship Agrarian">Seedship Agrarian</option>
+                                
+                                    <option value="Seedship Impact">Seedship Impact</option>
+                                
+                                    <option value="Debris Field Crusher">Debris Field Crusher</option>
+                                
+                                    <option value="Vaultguard Trooper">Vaultguard Trooper</option>
+                                
+                                    <option value="Gene Pollinator">Gene Pollinator</option>
+                                
+                                    <option value="Tannuk, Memorial Ensign">Tannuk, Memorial Ensign</option>
+                                
+                                    <option value="Galvanizing Sawship">Galvanizing Sawship</option>
+                                
+                                    <option value="Invasive Maneuvers">Invasive Maneuvers</option>
+                                
+                                    <option value="Systems Override">Systems Override</option>
+                                
+                                    <option value="Close Encounter">Close Encounter</option>
+                                
+                                    <option value="Diplomatic Relations">Diplomatic Relations</option>
+                                
+                                    <option value="Blooming Stinger">Blooming Stinger</option>
+                                
+                                    <option value="Memorial Team Leader">Memorial Team Leader</option>
+                                
+                                    <option value="Biosynthic Burst">Biosynthic Burst</option>
+                                
+                                    <option value="Lashwhip Predator">Lashwhip Predator</option>
+                                
+                                    <option value="Skystinger">Skystinger</option>
+                                
+                                    <option value="Germinating Wurm">Germinating Wurm</option>
+                                
+                                    <option value="Meltstrider Eulogist">Meltstrider Eulogist</option>
+                                
+                                    <option value="Shattered Wings">Shattered Wings</option>
+                                
+                                    <option value="Tapestry Warden">Tapestry Warden</option>
+                                
+                                    <option value="Plasma Bolt">Plasma Bolt</option>
+                                
+                                    <option value="Remnant Elemental">Remnant Elemental</option>
+                                
+                                    <option value="Edge Rover">Edge Rover</option>
+                                
+                                    <option value="Meltstrider's Resolve">Meltstrider's Resolve</option>
+                                
+                                    <option value="Hemosymbic Mite">Hemosymbic Mite</option>
+                                
+                                    <option value="Broodguard Elite">Broodguard Elite</option>
+                                
+                                    <option value="Drix Fatemaker">Drix Fatemaker</option>
+                                
+                                    <option value="Sami's Curiosity">Sami's Curiosity</option>
+                                
+                                    <option value="Intrepid Tenderfoot">Intrepid Tenderfoot</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Terrapact Intimidator", "image": "img/Terrapact_Intimidator.png", "label": "Terrapact Intimidator", "shape": "image", "title": "GIHWR:59.5, avg_pick:3.06", "url": "RG_combo_network_Terrapact_Intimidator"}, {"color": "#97c2fc", "id": "Bombard", "image": "img/Bombard.png", "label": "Bombard", "shape": "image", "title": "GIHWR:54.1, avg_pick:5.81", "url": "RG_combo_network_Bombard"}, {"color": "#97c2fc", "id": "Eusocial Engineering", "image": "img/Eusocial_Engineering.png", "label": "Eusocial Engineering", "shape": "image", "title": "GIHWR:56.9, avg_pick:3.99", "url": "RG_combo_network_Eusocial_Engineering"}, {"color": "#97c2fc", "id": "Kav Landseeker", "image": "img/Kav_Landseeker.png", "label": "Kav Landseeker", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.36", "url": "RG_combo_network_Kav_Landseeker"}, {"color": "#97c2fc", "id": "Cut Propulsion", "image": "img/Cut_Propulsion.png", "label": "Cut Propulsion", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.99", "url": "RG_combo_network_Cut_Propulsion"}, {"color": "#97c2fc", "id": "Kavaron Harrier", "image": "img/Kavaron_Harrier.png", "label": "Kavaron Harrier", "shape": "image", "title": "GIHWR:56.2, avg_pick:5.7", "url": "RG_combo_network_Kavaron_Harrier"}, {"color": "#97c2fc", "id": "Kavaron Skywarden", "image": "img/Kavaron_Skywarden.png", "label": "Kavaron Skywarden", "shape": "image", "title": "GIHWR:51.3, avg_pick:10.66", "url": "RG_combo_network_Kavaron_Skywarden"}, {"color": "#97c2fc", "id": "Melded Moxite", "image": "img/Melded_Moxite.png", "label": "Melded Moxite", "shape": "image", "title": "GIHWR:55.8, avg_pick:8.57", "url": "RG_combo_network_Melded_Moxite"}, {"color": "#97c2fc", "id": "Molecular Modifier", "image": "img/Molecular_Modifier.png", "label": "Molecular Modifier", "shape": "image", "title": "GIHWR:54.6, avg_pick:6.3", "url": "RG_combo_network_Molecular_Modifier"}, {"color": "#97c2fc", "id": "Nebula Dragon", "image": "img/Nebula_Dragon.png", "label": "Nebula Dragon", "shape": "image", "title": "GIHWR:56.2, avg_pick:9.5", "url": "RG_combo_network_Nebula_Dragon"}, {"color": "#97c2fc", "id": "Orbital Plunge", "image": "img/Orbital_Plunge.png", "label": "Orbital Plunge", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.17", "url": "RG_combo_network_Orbital_Plunge"}, {"color": "#97c2fc", "id": "Slagdrill Scrapper", "image": "img/Slagdrill_Scrapper.png", "label": "Slagdrill Scrapper", "shape": "image", "title": "GIHWR:53.8, avg_pick:9.75", "url": "RG_combo_network_Slagdrill_Scrapper"}, {"color": "#97c2fc", "id": "Territorial Bruntar", "image": "img/Territorial_Bruntar.png", "label": "Territorial Bruntar", "shape": "image", "title": "GIHWR:55.8, avg_pick:5.39", "url": "RG_combo_network_Territorial_Bruntar"}, {"color": "#97c2fc", "id": "Weftstalker Ardent", "image": "img/Weftstalker_Ardent.png", "label": "Weftstalker Ardent", "shape": "image", "title": "GIHWR:53.5, avg_pick:6.21", "url": "RG_combo_network_Weftstalker_Ardent"}, {"color": "#97c2fc", "id": "Zookeeper Mechan", "image": "img/Zookeeper_Mechan.png", "label": "Zookeeper Mechan", "shape": "image", "title": "GIHWR:55.9, avg_pick:5.78", "url": "RG_combo_network_Zookeeper_Mechan"}, {"color": "#97c2fc", "id": "Eumidian Terrabotanist", "image": "img/Eumidian_Terrabotanist.png", "label": "Eumidian Terrabotanist", "shape": "image", "title": "GIHWR:56.5, avg_pick:4.42", "url": "RG_combo_network_Eumidian_Terrabotanist"}, {"color": "#97c2fc", "id": "Galactic Wayfarer", "image": "img/Galactic_Wayfarer.png", "label": "Galactic Wayfarer", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.17", "url": "RG_combo_network_Galactic_Wayfarer"}, {"color": "#97c2fc", "id": "Glacier Godmaw", "image": "img/Glacier_Godmaw.png", "label": "Glacier Godmaw", "shape": "image", "title": "GIHWR:59.6, avg_pick:2.74", "url": "RG_combo_network_Glacier_Godmaw"}, {"color": "#97c2fc", "id": "Harmonious Grovestrider", "image": "img/Harmonious_Grovestrider.png", "label": "Harmonious Grovestrider", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.06", "url": "RG_combo_network_Harmonious_Grovestrider"}, {"color": "#97c2fc", "id": "Icecave Crasher", "image": "img/Icecave_Crasher.png", "label": "Icecave Crasher", "shape": "image", "title": "GIHWR:55.8, avg_pick:7.95", "url": "RG_combo_network_Icecave_Crasher"}, {"color": "#97c2fc", "id": "Larval Scoutlander", "image": "img/Larval_Scoutlander.png", "label": "Larval Scoutlander", "shape": "image", "title": "GIHWR:59.0, avg_pick:3.1", "url": "RG_combo_network_Larval_Scoutlander"}, {"color": "#97c2fc", "id": "Seedship Agrarian", "image": "img/Seedship_Agrarian.png", "label": "Seedship Agrarian", "shape": "image", "title": "GIHWR:56.8, avg_pick:2.87", "url": "RG_combo_network_Seedship_Agrarian"}, {"color": "#97c2fc", "id": "Seedship Impact", "image": "img/Seedship_Impact.png", "label": "Seedship Impact", "shape": "image", "title": "GIHWR:57.7, avg_pick:5.26", "url": "RG_combo_network_Seedship_Impact"}, {"color": "#97c2fc", "id": "Debris Field Crusher", "image": "img/Debris_Field_Crusher.png", "label": "Debris Field Crusher", "shape": "image", "title": "GIHWR:52.2, avg_pick:6.47", "url": "RG_combo_network_Debris_Field_Crusher"}, {"color": "#97c2fc", "id": "Vaultguard Trooper", "image": "img/Vaultguard_Trooper.png", "label": "Vaultguard Trooper", "shape": "image", "title": "GIHWR:53.7, avg_pick:7.55", "url": "RG_combo_network_Vaultguard_Trooper"}, {"color": "#97c2fc", "id": "Gene Pollinator", "image": "img/Gene_Pollinator.png", "label": "Gene Pollinator", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.65", "url": "RG_combo_network_Gene_Pollinator"}, {"color": "#97c2fc", "id": "Tannuk, Memorial Ensign", "image": "img/Tannuk,_Memorial_Ensign.png", "label": "Tannuk, Memorial Ensign", "shape": "image", "title": "GIHWR:56.0, avg_pick:5.02", "url": "RG_combo_network_Tannuk,_Memorial_Ensign"}, {"color": "#97c2fc", "id": "Galvanizing Sawship", "image": "img/Galvanizing_Sawship.png", "label": "Galvanizing Sawship", "shape": "image", "title": "GIHWR:49.9, avg_pick:7.0", "url": "RG_combo_network_Galvanizing_Sawship"}, {"color": "#97c2fc", "id": "Invasive Maneuvers", "image": "img/Invasive_Maneuvers.png", "label": "Invasive Maneuvers", "shape": "image", "title": "GIHWR:55.7, avg_pick:4.11", "url": "RG_combo_network_Invasive_Maneuvers"}, {"color": "#97c2fc", "id": "Systems Override", "image": "img/Systems_Override.png", "label": "Systems Override", "shape": "image", "title": "GIHWR:56.0, avg_pick:8.53", "url": "RG_combo_network_Systems_Override"}, {"color": "#97c2fc", "id": "Close Encounter", "image": "img/Close_Encounter.png", "label": "Close Encounter", "shape": "image", "title": "GIHWR:56.4, avg_pick:4.05", "url": "RG_combo_network_Close_Encounter"}, {"color": "#97c2fc", "id": "Diplomatic Relations", "image": "img/Diplomatic_Relations.png", "label": "Diplomatic Relations", "shape": "image", "title": "GIHWR:56.8, avg_pick:5.24", "url": "RG_combo_network_Diplomatic_Relations"}, {"color": "#97c2fc", "id": "Blooming Stinger", "image": "img/Blooming_Stinger.png", "label": "Blooming Stinger", "shape": "image", "title": "GIHWR:55.4, avg_pick:7.43", "url": "RG_combo_network_Blooming_Stinger"}, {"color": "#97c2fc", "id": "Memorial Team Leader", "image": "img/Memorial_Team_Leader.png", "label": "Memorial Team Leader", "shape": "image", "title": "GIHWR:53.2, avg_pick:7.37", "url": "RG_combo_network_Memorial_Team_Leader"}, {"color": "#97c2fc", "id": "Biosynthic Burst", "image": "img/Biosynthic_Burst.png", "label": "Biosynthic Burst", "shape": "image", "title": "GIHWR:57.0, avg_pick:7.8", "url": "RG_combo_network_Biosynthic_Burst"}, {"color": "#97c2fc", "id": "Lashwhip Predator", "image": "img/Lashwhip_Predator.png", "label": "Lashwhip Predator", "shape": "image", "title": "GIHWR:54.6, avg_pick:5.08", "url": "RG_combo_network_Lashwhip_Predator"}, {"color": "#97c2fc", "id": "Skystinger", "image": "img/Skystinger.png", "label": "Skystinger", "shape": "image", "title": "GIHWR:52.8, avg_pick:10.01", "url": "RG_combo_network_Skystinger"}, {"color": "#97c2fc", "id": "Germinating Wurm", "image": "img/Germinating_Wurm.png", "label": "Germinating Wurm", "shape": "image", "title": "GIHWR:55.8, avg_pick:7.58", "url": "RG_combo_network_Germinating_Wurm"}, {"color": "#97c2fc", "id": "Meltstrider Eulogist", "image": "img/Meltstrider_Eulogist.png", "label": "Meltstrider Eulogist", "shape": "image", "title": "GIHWR:53.2, avg_pick:6.02", "url": "RG_combo_network_Meltstrider_Eulogist"}, {"color": "#97c2fc", "id": "Shattered Wings", "image": "img/Shattered_Wings.png", "label": "Shattered Wings", "shape": "image", "title": "GIHWR:51.8, avg_pick:10.25", "url": "RG_combo_network_Shattered_Wings"}, {"color": "#97c2fc", "id": "Tapestry Warden", "image": "img/Tapestry_Warden.png", "label": "Tapestry Warden", "shape": "image", "title": "GIHWR:53.7, avg_pick:7.32", "url": "RG_combo_network_Tapestry_Warden"}, {"color": "#97c2fc", "id": "Plasma Bolt", "image": "img/Plasma_Bolt.png", "label": "Plasma Bolt", "shape": "image", "title": "GIHWR:55.2, avg_pick:5.89", "url": "RG_combo_network_Plasma_Bolt"}, {"color": "#97c2fc", "id": "Remnant Elemental", "image": "img/Remnant_Elemental.png", "label": "Remnant Elemental", "shape": "image", "title": "GIHWR:52.6, avg_pick:8.91", "url": "RG_combo_network_Remnant_Elemental"}, {"color": "#97c2fc", "id": "Edge Rover", "image": "img/Edge_Rover.png", "label": "Edge Rover", "shape": "image", "title": "GIHWR:57.2, avg_pick:4.08", "url": "RG_combo_network_Edge_Rover"}, {"color": "#97c2fc", "id": "Meltstrider\u0027s Resolve", "image": "img/Meltstrider\u0027s_Resolve.png", "label": "Meltstrider\u0027s Resolve", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.83", "url": "RG_combo_network_Meltstrider\u0027s_Resolve"}, {"color": "#97c2fc", "id": "Hemosymbic Mite", "image": "img/Hemosymbic_Mite.png", "label": "Hemosymbic Mite", "shape": "image", "title": "GIHWR:53.8, avg_pick:8.08", "url": "RG_combo_network_Hemosymbic_Mite"}, {"color": "#97c2fc", "id": "Broodguard Elite", "image": "img/Broodguard_Elite.png", "label": "Broodguard Elite", "shape": "image", "title": "GIHWR:53.0, avg_pick:4.62", "url": "RG_combo_network_Broodguard_Elite"}, {"color": "#97c2fc", "id": "Drix Fatemaker", "image": "img/Drix_Fatemaker.png", "label": "Drix Fatemaker", "shape": "image", "title": "GIHWR:53.8, avg_pick:7.29", "url": "RG_combo_network_Drix_Fatemaker"}, {"color": "#97c2fc", "id": "Sami\u0027s Curiosity", "image": "img/Sami\u0027s_Curiosity.png", "label": "Sami\u0027s Curiosity", "shape": "image", "title": "GIHWR:53.9, avg_pick:7.25", "url": "RG_combo_network_Sami\u0027s_Curiosity"}, {"color": "#97c2fc", "id": "Intrepid Tenderfoot", "image": "img/Intrepid_Tenderfoot.png", "label": "Intrepid Tenderfoot", "shape": "image", "title": "GIHWR:54.4, avg_pick:8.13", "url": "RG_combo_network_Intrepid_Tenderfoot"}]);
+                  edges = new vis.DataSet([{"from": "Terrapact Intimidator", "label": "3.11", "title": "combo_ct:4482, comboWR:59.91, combo+-:3.11, AB_AveWR:56.8", "to": "Bombard", "value": 4482}, {"from": "Terrapact Intimidator", "label": "6.07", "title": "combo_ct:2455, comboWR:63.67, combo+-:6.07, AB_AveWR:57.6", "to": "Cut Propulsion", "value": 2455}, {"from": "Terrapact Intimidator", "label": "6.46", "title": "combo_ct:1125, comboWR:62.31, combo+-:6.46, AB_AveWR:55.85", "to": "Debris Field Crusher", "value": 1125}, {"from": "Terrapact Intimidator", "label": "3.12", "title": "combo_ct:1190, comboWR:57.82, combo+-:3.12, AB_AveWR:54.7", "to": "Galvanizing Sawship", "value": 1190}, {"from": "Terrapact Intimidator", "label": "3.82", "title": "combo_ct:2219, comboWR:61.42, combo+-:3.82, AB_AveWR:57.6", "to": "Invasive Maneuvers", "value": 2219}, {"from": "Terrapact Intimidator", "label": "3.09", "title": "combo_ct:1102, comboWR:59.44, combo+-:3.09, AB_AveWR:56.35", "to": "Memorial Team Leader", "value": 1102}, {"from": "Terrapact Intimidator", "label": "4.08", "title": "combo_ct:2448, comboWR:61.93, combo+-:4.08, AB_AveWR:57.85", "to": "Nebula Dragon", "value": 2448}, {"from": "Terrapact Intimidator", "label": "4.12", "title": "combo_ct:6073, comboWR:62.47, combo+-:4.12, AB_AveWR:58.35", "to": "Orbital Plunge", "value": 6073}, {"from": "Terrapact Intimidator", "label": "3.51", "title": "combo_ct:4839, comboWR:60.86, combo+-:3.51, AB_AveWR:57.35", "to": "Plasma Bolt", "value": 4839}, {"from": "Terrapact Intimidator", "label": "3.32", "title": "combo_ct:2313, comboWR:59.97, combo+-:3.32, AB_AveWR:56.65", "to": "Slagdrill Scrapper", "value": 2313}, {"from": "Terrapact Intimidator", "label": "4.58", "title": "combo_ct:807, comboWR:62.33, combo+-:4.58, AB_AveWR:57.75", "to": "Systems Override", "value": 807}, {"from": "Terrapact Intimidator", "label": "3.98", "title": "combo_ct:2020, comboWR:61.63, combo+-:3.98, AB_AveWR:57.65", "to": "Territorial Bruntar", "value": 2020}, {"from": "Terrapact Intimidator", "label": "4.27", "title": "combo_ct:1352, comboWR:60.87, combo+-:4.27, AB_AveWR:56.6", "to": "Vaultguard Trooper", "value": 1352}, {"from": "Terrapact Intimidator", "label": "4.56", "title": "combo_ct:1279, comboWR:61.06, combo+-:4.56, AB_AveWR:56.5", "to": "Weftstalker Ardent", "value": 1279}, {"from": "Terrapact Intimidator", "label": "3.43", "title": "combo_ct:1323, comboWR:61.68, combo+-:3.43, AB_AveWR:58.25", "to": "Biosynthic Burst", "value": 1323}, {"from": "Terrapact Intimidator", "label": "4.37", "title": "combo_ct:844, comboWR:62.32, combo+-:4.37, AB_AveWR:57.95", "to": "Close Encounter", "value": 844}, {"from": "Terrapact Intimidator", "label": "3.76", "title": "combo_ct:2011, comboWR:61.91, combo+-:3.76, AB_AveWR:58.15", "to": "Diplomatic Relations", "value": 2011}, {"from": "Terrapact Intimidator", "label": "4.03", "title": "combo_ct:864, comboWR:62.38, combo+-:4.03, AB_AveWR:58.35", "to": "Edge Rover", "value": 864}, {"from": "Terrapact Intimidator", "label": "5.77", "title": "combo_ct:927, comboWR:63.97, combo+-:5.77, AB_AveWR:58.2", "to": "Eusocial Engineering", "value": 927}, {"from": "Terrapact Intimidator", "label": "5.78", "title": "combo_ct:1001, comboWR:65.33, combo+-:5.78, AB_AveWR:59.55", "to": "Glacier Godmaw", "value": 1001}, {"from": "Terrapact Intimidator", "label": "4.55", "title": "combo_ct:963, comboWR:63.45, combo+-:4.55, AB_AveWR:58.9", "to": "Harmonious Grovestrider", "value": 963}, {"from": "Terrapact Intimidator", "label": "5.3", "title": "combo_ct:1041, comboWR:64.55, combo+-:5.3, AB_AveWR:59.25", "to": "Larval Scoutlander", "value": 1041}, {"from": "Terrapact Intimidator", "label": "5.02", "title": "combo_ct:882, comboWR:64.17, combo+-:5.02, AB_AveWR:59.15", "to": "Meltstrider\u0027s Resolve", "value": 882}, {"from": "Terrapact Intimidator", "label": "4.74", "title": "combo_ct:1730, comboWR:62.49, combo+-:4.74, AB_AveWR:57.75", "to": "Tannuk, Memorial Ensign", "value": 1730}, {"from": "Bombard", "label": "3.53", "title": "combo_ct:1240, comboWR:59.03, combo+-:3.53, AB_AveWR:55.5", "to": "Eusocial Engineering", "value": 1240}, {"from": "Eusocial Engineering", "label": "4.2", "title": "combo_ct:681, comboWR:60.5, combo+-:4.2, AB_AveWR:56.3", "to": "Cut Propulsion", "value": 681}, {"from": "Eusocial Engineering", "label": "7.03", "title": "combo_ct:559, comboWR:63.33, combo+-:7.03, AB_AveWR:56.3", "to": "Invasive Maneuvers", "value": 559}, {"from": "Eusocial Engineering", "label": "7.76", "title": "combo_ct:2160, comboWR:64.81, combo+-:7.76, AB_AveWR:57.05", "to": "Orbital Plunge", "value": 2160}, {"from": "Eusocial Engineering", "label": "3.55", "title": "combo_ct:1198, comboWR:59.6, combo+-:3.55, AB_AveWR:56.05", "to": "Plasma Bolt", "value": 1198}, {"from": "Eusocial Engineering", "label": "3.32", "title": "combo_ct:729, comboWR:59.67, combo+-:3.32, AB_AveWR:56.35", "to": "Territorial Bruntar", "value": 729}, {"from": "Eusocial Engineering", "label": "3.68", "title": "combo_ct:1428, comboWR:60.08, combo+-:3.68, AB_AveWR:56.4", "to": "Zookeeper Mechan", "value": 1428}, {"from": "Eusocial Engineering", "label": "3.91", "title": "combo_ct:1955, comboWR:60.56, combo+-:3.91, AB_AveWR:56.65", "to": "Close Encounter", "value": 1955}, {"from": "Eusocial Engineering", "label": "5.02", "title": "combo_ct:5984, comboWR:62.62, combo+-:5.02, AB_AveWR:57.6", "to": "Galactic Wayfarer", "value": 5984}, {"from": "Eusocial Engineering", "label": "7.55", "title": "combo_ct:2357, comboWR:65.8, combo+-:7.55, AB_AveWR:58.25", "to": "Glacier Godmaw", "value": 2357}, {"from": "Eusocial Engineering", "label": "5.26", "title": "combo_ct:2506, comboWR:63.21, combo+-:5.26, AB_AveWR:57.95", "to": "Larval Scoutlander", "value": 2506}, {"from": "Eusocial Engineering", "label": "3.13", "title": "combo_ct:1408, comboWR:58.88, combo+-:3.13, AB_AveWR:55.75", "to": "Lashwhip Predator", "value": 1408}, {"from": "Eusocial Engineering", "label": "3.93", "title": "combo_ct:3922, comboWR:59.33, combo+-:3.93, AB_AveWR:55.4", "to": "Sami\u0027s Curiosity", "value": 3922}, {"from": "Eusocial Engineering", "label": "3.77", "title": "combo_ct:2137, comboWR:61.07, combo+-:3.77, AB_AveWR:57.3", "to": "Seedship Impact", "value": 2137}, {"from": "Eusocial Engineering", "label": "4.45", "title": "combo_ct:1051, comboWR:58.8, combo+-:4.45, AB_AveWR:54.35", "to": "Shattered Wings", "value": 1051}, {"from": "Kav Landseeker", "label": "3.26", "title": "combo_ct:3786, comboWR:59.11, combo+-:3.26, AB_AveWR:55.85", "to": "Cut Propulsion", "value": 3786}, {"from": "Kav Landseeker", "label": "3.07", "title": "combo_ct:3569, comboWR:58.92, combo+-:3.07, AB_AveWR:55.85", "to": "Invasive Maneuvers", "value": 3569}, {"from": "Kav Landseeker", "label": "3.81", "title": "combo_ct:4422, comboWR:59.91, combo+-:3.81, AB_AveWR:56.1", "to": "Nebula Dragon", "value": 4422}, {"from": "Kav Landseeker", "label": "4.98", "title": "combo_ct:1148, comboWR:60.98, combo+-:4.98, AB_AveWR:56.0", "to": "Systems Override", "value": 1148}, {"from": "Kav Landseeker", "label": "3.58", "title": "combo_ct:1514, comboWR:59.78, combo+-:3.58, AB_AveWR:56.2", "to": "Close Encounter", "value": 1514}, {"from": "Kav Landseeker", "label": "3.03", "title": "combo_ct:1633, comboWR:59.28, combo+-:3.03, AB_AveWR:56.25", "to": "Eumidian Terrabotanist", "value": 1633}, {"from": "Kav Landseeker", "label": "4.62", "title": "combo_ct:1932, comboWR:62.42, combo+-:4.62, AB_AveWR:57.8", "to": "Glacier Godmaw", "value": 1932}, {"from": "Kav Landseeker", "label": "3.27", "title": "combo_ct:1635, comboWR:60.12, combo+-:3.27, AB_AveWR:56.85", "to": "Seedship Impact", "value": 1635}, {"from": "Cut Propulsion", "label": "3.09", "title": "combo_ct:1499, comboWR:59.04, combo+-:3.09, AB_AveWR:55.95", "to": "Kavaron Harrier", "value": 1499}, {"from": "Cut Propulsion", "label": "4.02", "title": "combo_ct:831, comboWR:57.52, combo+-:4.02, AB_AveWR:53.5", "to": "Kavaron Skywarden", "value": 831}, {"from": "Cut Propulsion", "label": "3.57", "title": "combo_ct:2984, comboWR:59.32, combo+-:3.57, AB_AveWR:55.75", "to": "Melded Moxite", "value": 2984}, {"from": "Cut Propulsion", "label": "3.04", "title": "combo_ct:1416, comboWR:58.19, combo+-:3.04, AB_AveWR:55.15", "to": "Molecular Modifier", "value": 1416}, {"from": "Cut Propulsion", "label": "5.11", "title": "combo_ct:1831, comboWR:61.06, combo+-:5.11, AB_AveWR:55.95", "to": "Nebula Dragon", "value": 1831}, {"from": "Cut Propulsion", "label": "3.05", "title": "combo_ct:4689, comboWR:59.5, combo+-:3.05, AB_AveWR:56.45", "to": "Orbital Plunge", "value": 4689}, {"from": "Cut Propulsion", "label": "3.01", "title": "combo_ct:1939, comboWR:57.76, combo+-:3.01, AB_AveWR:54.75", "to": "Slagdrill Scrapper", "value": 1939}, {"from": "Cut Propulsion", "label": "4.38", "title": "combo_ct:1653, comboWR:60.13, combo+-:4.38, AB_AveWR:55.75", "to": "Territorial Bruntar", "value": 1653}, {"from": "Cut Propulsion", "label": "3.4", "title": "combo_ct:1081, comboWR:58.0, combo+-:3.4, AB_AveWR:54.6", "to": "Weftstalker Ardent", "value": 1081}, {"from": "Cut Propulsion", "label": "3.02", "title": "combo_ct:4728, comboWR:58.82, combo+-:3.02, AB_AveWR:55.8", "to": "Zookeeper Mechan", "value": 4728}, {"from": "Cut Propulsion", "label": "3.85", "title": "combo_ct:759, comboWR:59.95, combo+-:3.85, AB_AveWR:56.1", "to": "Eumidian Terrabotanist", "value": 759}, {"from": "Cut Propulsion", "label": "3.55", "title": "combo_ct:2071, comboWR:60.55, combo+-:3.55, AB_AveWR:57.0", "to": "Galactic Wayfarer", "value": 2071}, {"from": "Cut Propulsion", "label": "4.33", "title": "combo_ct:776, comboWR:61.98, combo+-:4.33, AB_AveWR:57.65", "to": "Glacier Godmaw", "value": 776}, {"from": "Cut Propulsion", "label": "4.72", "title": "combo_ct:781, comboWR:61.72, combo+-:4.72, AB_AveWR:57.0", "to": "Harmonious Grovestrider", "value": 781}, {"from": "Cut Propulsion", "label": "4.05", "title": "combo_ct:1087, comboWR:59.8, combo+-:4.05, AB_AveWR:55.75", "to": "Icecave Crasher", "value": 1087}, {"from": "Cut Propulsion", "label": "3.58", "title": "combo_ct:750, comboWR:60.93, combo+-:3.58, AB_AveWR:57.35", "to": "Larval Scoutlander", "value": 750}, {"from": "Cut Propulsion", "label": "5.72", "title": "combo_ct:689, comboWR:61.97, combo+-:5.72, AB_AveWR:56.25", "to": "Seedship Agrarian", "value": 689}, {"from": "Cut Propulsion", "label": "5.89", "title": "combo_ct:703, comboWR:62.59, combo+-:5.89, AB_AveWR:56.7", "to": "Seedship Impact", "value": 703}, {"from": "Kavaron Harrier", "label": "3.97", "title": "combo_ct:1037, comboWR:60.17, combo+-:3.97, AB_AveWR:56.2", "to": "Nebula Dragon", "value": 1037}, {"from": "Kavaron Harrier", "label": "3.36", "title": "combo_ct:588, comboWR:59.86, combo+-:3.36, AB_AveWR:56.5", "to": "Diplomatic Relations", "value": 588}, {"from": "Kavaron Skywarden", "label": "3.72", "title": "combo_ct:566, comboWR:57.07, combo+-:3.72, AB_AveWR:53.35", "to": "Blooming Stinger", "value": 566}, {"from": "Melded Moxite", "label": "4.72", "title": "combo_ct:777, comboWR:62.42, combo+-:4.72, AB_AveWR:57.7", "to": "Glacier Godmaw", "value": 777}, {"from": "Melded Moxite", "label": "4.1", "title": "combo_ct:695, comboWR:61.15, combo+-:4.1, AB_AveWR:57.05", "to": "Harmonious Grovestrider", "value": 695}, {"from": "Molecular Modifier", "label": "5.67", "title": "combo_ct:987, comboWR:59.57, combo+-:5.67, AB_AveWR:53.9", "to": "Memorial Team Leader", "value": 987}, {"from": "Molecular Modifier", "label": "4.6", "title": "combo_ct:606, comboWR:60.4, combo+-:4.6, AB_AveWR:55.8", "to": "Biosynthic Burst", "value": 606}, {"from": "Nebula Dragon", "label": "4.17", "title": "combo_ct:5421, comboWR:60.87, combo+-:4.17, AB_AveWR:56.7", "to": "Orbital Plunge", "value": 5421}, {"from": "Nebula Dragon", "label": "4.05", "title": "combo_ct:4521, comboWR:60.1, combo+-:4.05, AB_AveWR:56.05", "to": "Zookeeper Mechan", "value": 4521}, {"from": "Nebula Dragon", "label": "4.13", "title": "combo_ct:1202, comboWR:60.48, combo+-:4.13, AB_AveWR:56.35", "to": "Eumidian Terrabotanist", "value": 1202}, {"from": "Nebula Dragon", "label": "4.71", "title": "combo_ct:3807, comboWR:61.96, combo+-:4.71, AB_AveWR:57.25", "to": "Galactic Wayfarer", "value": 3807}, {"from": "Nebula Dragon", "label": "3.61", "title": "combo_ct:3192, comboWR:60.31, combo+-:3.61, AB_AveWR:56.7", "to": "Gene Pollinator", "value": 3192}, {"from": "Nebula Dragon", "label": "3.3", "title": "combo_ct:1103, comboWR:61.2, combo+-:3.3, AB_AveWR:57.9", "to": "Glacier Godmaw", "value": 1103}, {"from": "Nebula Dragon", "label": "4.63", "title": "combo_ct:1288, comboWR:61.88, combo+-:4.63, AB_AveWR:57.25", "to": "Harmonious Grovestrider", "value": 1288}, {"from": "Nebula Dragon", "label": "4.17", "title": "combo_ct:2320, comboWR:60.17, combo+-:4.17, AB_AveWR:56.0", "to": "Icecave Crasher", "value": 2320}, {"from": "Nebula Dragon", "label": "3.97", "title": "combo_ct:1512, comboWR:61.57, combo+-:3.97, AB_AveWR:57.6", "to": "Larval Scoutlander", "value": 1512}, {"from": "Nebula Dragon", "label": "3.96", "title": "combo_ct:689, comboWR:59.36, combo+-:3.96, AB_AveWR:55.4", "to": "Lashwhip Predator", "value": 689}, {"from": "Nebula Dragon", "label": "3.5", "title": "combo_ct:1196, comboWR:60.45, combo+-:3.5, AB_AveWR:56.95", "to": "Seedship Impact", "value": 1196}, {"from": "Nebula Dragon", "label": "4.89", "title": "combo_ct:687, comboWR:59.39, combo+-:4.89, AB_AveWR:54.5", "to": "Skystinger", "value": 687}, {"from": "Nebula Dragon", "label": "3.62", "title": "combo_ct:1852, comboWR:59.72, combo+-:3.62, AB_AveWR:56.1", "to": "Tannuk, Memorial Ensign", "value": 1852}, {"from": "Orbital Plunge", "label": "3.3", "title": "combo_ct:4803, comboWR:58.8, combo+-:3.3, AB_AveWR:55.5", "to": "Slagdrill Scrapper", "value": 4803}, {"from": "Orbital Plunge", "label": "3.17", "title": "combo_ct:4379, comboWR:59.67, combo+-:3.17, AB_AveWR:56.5", "to": "Territorial Bruntar", "value": 4379}, {"from": "Orbital Plunge", "label": "3.47", "title": "combo_ct:2484, comboWR:58.82, combo+-:3.47, AB_AveWR:55.35", "to": "Weftstalker Ardent", "value": 2484}, {"from": "Orbital Plunge", "label": "3.57", "title": "combo_ct:11905, comboWR:60.12, combo+-:3.57, AB_AveWR:56.55", "to": "Zookeeper Mechan", "value": 11905}, {"from": "Orbital Plunge", "label": "3.65", "title": "combo_ct:1856, comboWR:60.45, combo+-:3.65, AB_AveWR:56.8", "to": "Close Encounter", "value": 1856}, {"from": "Orbital Plunge", "label": "3.46", "title": "combo_ct:2212, comboWR:60.31, combo+-:3.46, AB_AveWR:56.85", "to": "Eumidian Terrabotanist", "value": 2212}, {"from": "Orbital Plunge", "label": "3.81", "title": "combo_ct:3784, comboWR:60.31, combo+-:3.81, AB_AveWR:56.5", "to": "Germinating Wurm", "value": 3784}, {"from": "Orbital Plunge", "label": "5.86", "title": "combo_ct:2535, comboWR:64.26, combo+-:5.86, AB_AveWR:58.4", "to": "Glacier Godmaw", "value": 2535}, {"from": "Orbital Plunge", "label": "3.76", "title": "combo_ct:2229, comboWR:61.51, combo+-:3.76, AB_AveWR:57.75", "to": "Harmonious Grovestrider", "value": 2229}, {"from": "Orbital Plunge", "label": "4.65", "title": "combo_ct:528, comboWR:59.85, combo+-:4.65, AB_AveWR:55.2", "to": "Meltstrider Eulogist", "value": 528}, {"from": "Orbital Plunge", "label": "3.02", "title": "combo_ct:864, comboWR:57.52, combo+-:3.02, AB_AveWR:54.5", "to": "Shattered Wings", "value": 864}, {"from": "Orbital Plunge", "label": "3.59", "title": "combo_ct:1118, comboWR:58.59, combo+-:3.59, AB_AveWR:55.0", "to": "Skystinger", "value": 1118}, {"from": "Orbital Plunge", "label": "3.41", "title": "combo_ct:756, comboWR:58.86, combo+-:3.41, AB_AveWR:55.45", "to": "Tapestry Warden", "value": 756}, {"from": "Orbital Plunge", "label": "4.64", "title": "combo_ct:3545, comboWR:61.24, combo+-:4.64, AB_AveWR:56.6", "to": "Tannuk, Memorial Ensign", "value": 3545}, {"from": "Territorial Bruntar", "label": "4.99", "title": "combo_ct:762, comboWR:59.19, combo+-:4.99, AB_AveWR:54.2", "to": "Remnant Elemental", "value": 762}, {"from": "Territorial Bruntar", "label": "3.6", "title": "combo_ct:732, comboWR:59.7, combo+-:3.6, AB_AveWR:56.1", "to": "Close Encounter", "value": 732}, {"from": "Territorial Bruntar", "label": "3.41", "title": "combo_ct:1601, comboWR:59.71, combo+-:3.41, AB_AveWR:56.3", "to": "Diplomatic Relations", "value": 1601}, {"from": "Territorial Bruntar", "label": "3.99", "title": "combo_ct:828, comboWR:60.14, combo+-:3.99, AB_AveWR:56.15", "to": "Eumidian Terrabotanist", "value": 828}, {"from": "Territorial Bruntar", "label": "3.65", "title": "combo_ct:2163, comboWR:60.7, combo+-:3.65, AB_AveWR:57.05", "to": "Galactic Wayfarer", "value": 2163}, {"from": "Territorial Bruntar", "label": "3.41", "title": "combo_ct:1776, comboWR:59.91, combo+-:3.41, AB_AveWR:56.5", "to": "Gene Pollinator", "value": 1776}, {"from": "Territorial Bruntar", "label": "4.62", "title": "combo_ct:890, comboWR:62.02, combo+-:4.62, AB_AveWR:57.4", "to": "Larval Scoutlander", "value": 890}, {"from": "Territorial Bruntar", "label": "3.18", "title": "combo_ct:744, comboWR:60.48, combo+-:3.18, AB_AveWR:57.3", "to": "Meltstrider\u0027s Resolve", "value": 744}, {"from": "Territorial Bruntar", "label": "5.08", "title": "combo_ct:795, comboWR:61.38, combo+-:5.08, AB_AveWR:56.3", "to": "Seedship Agrarian", "value": 795}, {"from": "Territorial Bruntar", "label": "7.79", "title": "combo_ct:657, comboWR:64.54, combo+-:7.79, AB_AveWR:56.75", "to": "Seedship Impact", "value": 657}, {"from": "Territorial Bruntar", "label": "3.57", "title": "combo_ct:1389, comboWR:59.47, combo+-:3.57, AB_AveWR:55.9", "to": "Tannuk, Memorial Ensign", "value": 1389}, {"from": "Weftstalker Ardent", "label": "4.2", "title": "combo_ct:645, comboWR:57.05, combo+-:4.2, AB_AveWR:52.85", "to": "Debris Field Crusher", "value": 645}, {"from": "Zookeeper Mechan", "label": "6.08", "title": "combo_ct:1714, comboWR:63.83, combo+-:6.08, AB_AveWR:57.75", "to": "Glacier Godmaw", "value": 1714}, {"from": "Zookeeper Mechan", "label": "3.34", "title": "combo_ct:668, comboWR:57.19, combo+-:3.34, AB_AveWR:53.85", "to": "Shattered Wings", "value": 668}, {"from": "Eumidian Terrabotanist", "label": "3.07", "title": "combo_ct:6335, comboWR:60.47, combo+-:3.07, AB_AveWR:57.4", "to": "Galactic Wayfarer", "value": 6335}, {"from": "Eumidian Terrabotanist", "label": "4.31", "title": "combo_ct:2641, comboWR:62.36, combo+-:4.31, AB_AveWR:58.05", "to": "Glacier Godmaw", "value": 2641}, {"from": "Eumidian Terrabotanist", "label": "3.07", "title": "combo_ct:2565, comboWR:60.82, combo+-:3.07, AB_AveWR:57.75", "to": "Larval Scoutlander", "value": 2565}, {"from": "Eumidian Terrabotanist", "label": "5.46", "title": "combo_ct:1027, comboWR:60.56, combo+-:5.46, AB_AveWR:55.1", "to": "Tapestry Warden", "value": 1027}, {"from": "Galactic Wayfarer", "label": "4.85", "title": "combo_ct:762, comboWR:60.1, combo+-:4.85, AB_AveWR:55.25", "to": "Debris Field Crusher", "value": 762}, {"from": "Galactic Wayfarer", "label": "3.12", "title": "combo_ct:769, comboWR:57.22, combo+-:3.12, AB_AveWR:54.1", "to": "Galvanizing Sawship", "value": 769}, {"from": "Galactic Wayfarer", "label": "3.38", "title": "combo_ct:6503, comboWR:60.73, combo+-:3.38, AB_AveWR:57.35", "to": "Close Encounter", "value": 6503}, {"from": "Galactic Wayfarer", "label": "3.04", "title": "combo_ct:14658, comboWR:60.59, combo+-:3.04, AB_AveWR:57.55", "to": "Diplomatic Relations", "value": 14658}, {"from": "Galactic Wayfarer", "label": "6.26", "title": "combo_ct:7369, comboWR:65.21, combo+-:6.26, AB_AveWR:58.95", "to": "Glacier Godmaw", "value": 7369}, {"from": "Galactic Wayfarer", "label": "3.09", "title": "combo_ct:7015, comboWR:61.74, combo+-:3.09, AB_AveWR:58.65", "to": "Larval Scoutlander", "value": 7015}, {"from": "Galactic Wayfarer", "label": "3.38", "title": "combo_ct:6004, comboWR:61.38, combo+-:3.38, AB_AveWR:58.0", "to": "Seedship Impact", "value": 6004}, {"from": "Glacier Godmaw", "label": "3.17", "title": "combo_ct:1466, comboWR:60.57, combo+-:3.17, AB_AveWR:57.4", "to": "Plasma Bolt", "value": 1466}, {"from": "Glacier Godmaw", "label": "4.63", "title": "combo_ct:522, comboWR:60.73, combo+-:4.63, AB_AveWR:56.1", "to": "Remnant Elemental", "value": 522}, {"from": "Glacier Godmaw", "label": "3.25", "title": "combo_ct:4042, comboWR:61.55, combo+-:3.25, AB_AveWR:58.3", "to": "Biosynthic Burst", "value": 4042}, {"from": "Glacier Godmaw", "label": "4.45", "title": "combo_ct:4980, comboWR:61.95, combo+-:4.45, AB_AveWR:57.5", "to": "Blooming Stinger", "value": 4980}, {"from": "Glacier Godmaw", "label": "3.47", "title": "combo_ct:6026, comboWR:61.67, combo+-:3.47, AB_AveWR:58.2", "to": "Diplomatic Relations", "value": 6026}, {"from": "Glacier Godmaw", "label": "5.62", "title": "combo_ct:2938, comboWR:64.02, combo+-:5.62, AB_AveWR:58.4", "to": "Edge Rover", "value": 2938}, {"from": "Glacier Godmaw", "label": "4.56", "title": "combo_ct:6603, comboWR:62.96, combo+-:4.56, AB_AveWR:58.4", "to": "Gene Pollinator", "value": 6603}, {"from": "Glacier Godmaw", "label": "3.98", "title": "combo_ct:4624, comboWR:61.68, combo+-:3.98, AB_AveWR:57.7", "to": "Germinating Wurm", "value": 4624}, {"from": "Glacier Godmaw", "label": "6.19", "title": "combo_ct:2886, comboWR:65.49, combo+-:6.19, AB_AveWR:59.3", "to": "Larval Scoutlander", "value": 2886}, {"from": "Glacier Godmaw", "label": "3.58", "title": "combo_ct:1658, comboWR:60.68, combo+-:3.58, AB_AveWR:57.1", "to": "Lashwhip Predator", "value": 1658}, {"from": "Glacier Godmaw", "label": "3.38", "title": "combo_ct:1089, comboWR:59.78, combo+-:3.38, AB_AveWR:56.4", "to": "Meltstrider Eulogist", "value": 1089}, {"from": "Glacier Godmaw", "label": "3.73", "title": "combo_ct:2646, comboWR:62.93, combo+-:3.73, AB_AveWR:59.2", "to": "Meltstrider\u0027s Resolve", "value": 2646}, {"from": "Glacier Godmaw", "label": "6.47", "title": "combo_ct:4704, comboWR:63.22, combo+-:6.47, AB_AveWR:56.75", "to": "Sami\u0027s Curiosity", "value": 4704}, {"from": "Glacier Godmaw", "label": "4.76", "title": "combo_ct:2454, comboWR:62.96, combo+-:4.76, AB_AveWR:58.2", "to": "Seedship Agrarian", "value": 2454}, {"from": "Glacier Godmaw", "label": "5.64", "title": "combo_ct:2456, comboWR:64.29, combo+-:5.64, AB_AveWR:58.65", "to": "Seedship Impact", "value": 2456}, {"from": "Glacier Godmaw", "label": "5.27", "title": "combo_ct:1763, comboWR:63.07, combo+-:5.27, AB_AveWR:57.8", "to": "Tannuk, Memorial Ensign", "value": 1763}, {"from": "Harmonious Grovestrider", "label": "4.52", "title": "combo_ct:673, comboWR:61.52, combo+-:4.52, AB_AveWR:57.0", "to": "Invasive Maneuvers", "value": 673}, {"from": "Harmonious Grovestrider", "label": "3.88", "title": "combo_ct:1232, comboWR:60.63, combo+-:3.88, AB_AveWR:56.75", "to": "Plasma Bolt", "value": 1232}, {"from": "Harmonious Grovestrider", "label": "4.13", "title": "combo_ct:4233, comboWR:61.78, combo+-:4.13, AB_AveWR:57.65", "to": "Biosynthic Burst", "value": 4233}, {"from": "Harmonious Grovestrider", "label": "3.2", "title": "combo_ct:5710, comboWR:60.75, combo+-:3.2, AB_AveWR:57.55", "to": "Diplomatic Relations", "value": 5710}, {"from": "Harmonious Grovestrider", "label": "5.81", "title": "combo_ct:2839, comboWR:64.46, combo+-:5.81, AB_AveWR:58.65", "to": "Larval Scoutlander", "value": 2839}, {"from": "Harmonious Grovestrider", "label": "4.4", "title": "combo_ct:2618, comboWR:62.95, combo+-:4.4, AB_AveWR:58.55", "to": "Meltstrider\u0027s Resolve", "value": 2618}, {"from": "Harmonious Grovestrider", "label": "4.0", "title": "combo_ct:4191, comboWR:60.1, combo+-:4.0, AB_AveWR:56.1", "to": "Sami\u0027s Curiosity", "value": 4191}, {"from": "Harmonious Grovestrider", "label": "3.82", "title": "combo_ct:2499, comboWR:61.82, combo+-:3.82, AB_AveWR:58.0", "to": "Seedship Impact", "value": 2499}, {"from": "Icecave Crasher", "label": "3.43", "title": "combo_ct:691, comboWR:58.18, combo+-:3.43, AB_AveWR:54.75", "to": "Vaultguard Trooper", "value": 691}, {"from": "Icecave Crasher", "label": "3.78", "title": "combo_ct:4000, comboWR:59.88, combo+-:3.78, AB_AveWR:56.1", "to": "Close Encounter", "value": 4000}, {"from": "Larval Scoutlander", "label": "4.61", "title": "combo_ct:765, comboWR:61.96, combo+-:4.61, AB_AveWR:57.35", "to": "Invasive Maneuvers", "value": 765}, {"from": "Larval Scoutlander", "label": "5.35", "title": "combo_ct:2463, comboWR:63.05, combo+-:5.35, AB_AveWR:57.7", "to": "Close Encounter", "value": 2463}, {"from": "Larval Scoutlander", "label": "3.7", "title": "combo_ct:5643, comboWR:61.6, combo+-:3.7, AB_AveWR:57.9", "to": "Diplomatic Relations", "value": 5643}, {"from": "Larval Scoutlander", "label": "4.53", "title": "combo_ct:4833, comboWR:61.93, combo+-:4.53, AB_AveWR:57.4", "to": "Germinating Wurm", "value": 4833}, {"from": "Larval Scoutlander", "label": "3.6", "title": "combo_ct:3501, comboWR:60.3, combo+-:3.6, AB_AveWR:56.7", "to": "Intrepid Tenderfoot", "value": 3501}, {"from": "Larval Scoutlander", "label": "3.69", "title": "combo_ct:1726, comboWR:60.49, combo+-:3.69, AB_AveWR:56.8", "to": "Lashwhip Predator", "value": 1726}, {"from": "Larval Scoutlander", "label": "3.59", "title": "combo_ct:960, comboWR:59.69, combo+-:3.59, AB_AveWR:56.1", "to": "Meltstrider Eulogist", "value": 960}, {"from": "Larval Scoutlander", "label": "4.21", "title": "combo_ct:2543, comboWR:63.11, combo+-:4.21, AB_AveWR:58.9", "to": "Meltstrider\u0027s Resolve", "value": 2543}, {"from": "Larval Scoutlander", "label": "4.84", "title": "combo_ct:2548, comboWR:63.19, combo+-:4.84, AB_AveWR:58.35", "to": "Seedship Impact", "value": 2548}, {"from": "Larval Scoutlander", "label": "3.08", "title": "combo_ct:1103, comboWR:58.48, combo+-:3.08, AB_AveWR:55.4", "to": "Shattered Wings", "value": 1103}, {"from": "Larval Scoutlander", "label": "3.34", "title": "combo_ct:1892, comboWR:60.84, combo+-:3.34, AB_AveWR:57.5", "to": "Tannuk, Memorial Ensign", "value": 1892}, {"from": "Seedship Agrarian", "label": "4.37", "title": "combo_ct:2186, comboWR:61.62, combo+-:4.37, AB_AveWR:57.25", "to": "Seedship Impact", "value": 2186}, {"from": "Seedship Agrarian", "label": "3.17", "title": "combo_ct:1541, comboWR:59.57, combo+-:3.17, AB_AveWR:56.4", "to": "Tannuk, Memorial Ensign", "value": 1541}, {"from": "Seedship Impact", "label": "4.19", "title": "combo_ct:1024, comboWR:60.64, combo+-:4.19, AB_AveWR:56.45", "to": "Plasma Bolt", "value": 1024}, {"from": "Seedship Impact", "label": "3.07", "title": "combo_ct:4169, comboWR:59.82, combo+-:3.07, AB_AveWR:56.75", "to": "Germinating Wurm", "value": 4169}, {"from": "Seedship Impact", "label": "3.29", "title": "combo_ct:1462, comboWR:59.44, combo+-:3.29, AB_AveWR:56.15", "to": "Lashwhip Predator", "value": 1462}, {"from": "Seedship Impact", "label": "3.45", "title": "combo_ct:949, comboWR:58.9, combo+-:3.45, AB_AveWR:55.45", "to": "Meltstrider Eulogist", "value": 949}, {"from": "Seedship Impact", "label": "4.23", "title": "combo_ct:886, comboWR:59.93, combo+-:4.23, AB_AveWR:55.7", "to": "Tapestry Warden", "value": 886}, {"from": "Debris Field Crusher", "label": "5.07", "title": "combo_ct:648, comboWR:58.02, combo+-:5.07, AB_AveWR:52.95", "to": "Vaultguard Trooper", "value": 648}, {"from": "Debris Field Crusher", "label": "3.01", "title": "combo_ct:525, comboWR:57.71, combo+-:3.01, AB_AveWR:54.7", "to": "Gene Pollinator", "value": 525}, {"from": "Debris Field Crusher", "label": "3.32", "title": "combo_ct:512, comboWR:57.42, combo+-:3.32, AB_AveWR:54.1", "to": "Tannuk, Memorial Ensign", "value": 512}, {"from": "Gene Pollinator", "label": "3.76", "title": "combo_ct:602, comboWR:57.31, combo+-:3.76, AB_AveWR:53.55", "to": "Galvanizing Sawship", "value": 602}, {"from": "Gene Pollinator", "label": "3.14", "title": "combo_ct:2833, comboWR:58.24, combo+-:3.14, AB_AveWR:55.1", "to": "Broodguard Elite", "value": 2833}, {"from": "Tannuk, Memorial Ensign", "label": "3.49", "title": "combo_ct:2320, comboWR:59.09, combo+-:3.49, AB_AveWR:55.6", "to": "Plasma Bolt", "value": 2320}, {"from": "Close Encounter", "label": "3.75", "title": "combo_ct:4379, comboWR:59.85, combo+-:3.75, AB_AveWR:56.1", "to": "Germinating Wurm", "value": 4379}, {"from": "Close Encounter", "label": "4.6", "title": "combo_ct:665, comboWR:59.7, combo+-:4.6, AB_AveWR:55.1", "to": "Hemosymbic Mite", "value": 665}, {"from": "Biosynthic Burst", "label": "3.31", "title": "combo_ct:1383, comboWR:58.71, combo+-:3.31, AB_AveWR:55.4", "to": "Hemosymbic Mite", "value": 1383}, {"from": "Skystinger", "label": "3.94", "title": "combo_ct:950, comboWR:56.84, combo+-:3.94, AB_AveWR:52.9", "to": "Broodguard Elite", "value": 950}, {"from": "Germinating Wurm", "label": "3.56", "title": "combo_ct:4573, comboWR:60.86, combo+-:3.56, AB_AveWR:57.3", "to": "Meltstrider\u0027s Resolve", "value": 4573}, {"from": "Meltstrider Eulogist", "label": "3.21", "title": "combo_ct:2756, comboWR:56.71, combo+-:3.21, AB_AveWR:53.5", "to": "Drix Fatemaker", "value": 2756}, {"from": "Shattered Wings", "label": "3.43", "title": "combo_ct:1877, comboWR:56.53, combo+-:3.43, AB_AveWR:53.1", "to": "Intrepid Tenderfoot", "value": 1877}, {"from": "Tapestry Warden", "label": "5.12", "title": "combo_ct:1082, comboWR:61.37, combo+-:5.12, AB_AveWR:56.25", "to": "Meltstrider\u0027s Resolve", "value": 1082}, {"from": "Meltstrider\u0027s Resolve", "label": "3.81", "title": "combo_ct:3201, comboWR:60.11, combo+-:3.81, AB_AveWR:56.3", "to": "Drix Fatemaker", "value": 3201}, {"from": "Meltstrider\u0027s Resolve", "label": "3.09", "title": "combo_ct:3803, comboWR:59.69, combo+-:3.09, AB_AveWR:56.6", "to": "Intrepid Tenderfoot", "value": 3803}, {"from": "Hemosymbic Mite", "label": "4.01", "title": "combo_ct:587, comboWR:57.41, combo+-:4.01, AB_AveWR:53.4", "to": "Broodguard Elite", "value": 587}, {"from": "Hemosymbic Mite", "label": "3.27", "title": "combo_ct:1393, comboWR:57.07, combo+-:3.27, AB_AveWR:53.8", "to": "Drix Fatemaker", "value": 1393}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

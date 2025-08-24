@@ -1,0 +1,410 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Dubious Delicacy">Dubious Delicacy</option>
+                                
+                                    <option value="Beamsaw Prospector">Beamsaw Prospector</option>
+                                
+                                    <option value="Faller's Faithful">Faller's Faithful</option>
+                                
+                                    <option value="Monoist Circuit-Feeder">Monoist Circuit-Feeder</option>
+                                
+                                    <option value="Temporal Intervention">Temporal Intervention</option>
+                                
+                                    <option value="Embrace Oblivion">Embrace Oblivion</option>
+                                
+                                    <option value="Blade of the Swarm">Blade of the Swarm</option>
+                                
+                                    <option value="Gravkill">Gravkill</option>
+                                
+                                    <option value="Perigee Beckoner">Perigee Beckoner</option>
+                                
+                                    <option value="Comet Crawler">Comet Crawler</option>
+                                
+                                    <option value="Fell Gravship">Fell Gravship</option>
+                                
+                                    <option value="Gravpack Monoist">Gravpack Monoist</option>
+                                
+                                    <option value="Depressurize">Depressurize</option>
+                                
+                                    <option value="Gravblade Heavy">Gravblade Heavy</option>
+                                
+                                    <option value="Hullcarver">Hullcarver</option>
+                                
+                                    <option value="Lightless Evangel">Lightless Evangel</option>
+                                
+                                    <option value="Susurian Dirgecraft">Susurian Dirgecraft</option>
+                                
+                                    <option value="Susurian Voidborn">Susurian Voidborn</option>
+                                
+                                    <option value="Swarm Culler">Swarm Culler</option>
+                                
+                                    <option value="Timeline Culler">Timeline Culler</option>
+                                
+                                    <option value="Tragic Trajectory">Tragic Trajectory</option>
+                                
+                                    <option value="Virus Beetle">Virus Beetle</option>
+                                
+                                    <option value="Voidforged Titan">Voidforged Titan</option>
+                                
+                                    <option value="Vote Out">Vote Out</option>
+                                
+                                    <option value="Monoist Sentry">Monoist Sentry</option>
+                                
+                                    <option value="Scrounge for Eternity">Scrounge for Eternity</option>
+                                
+                                    <option value="Hylderblade">Hylderblade</option>
+                                
+                                    <option value="Umbral Collar Zealot">Umbral Collar Zealot</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Dubious Delicacy", "image": "img/Dubious_Delicacy.png", "label": "Dubious Delicacy", "shape": "image", "title": "GIHWR:60.5, avg_pick:2.81", "url": "B_combo_network_Dubious_Delicacy"}, {"color": "#97c2fc", "id": "Beamsaw Prospector", "image": "img/Beamsaw_Prospector.png", "label": "Beamsaw Prospector", "shape": "image", "title": "GIHWR:55.0, avg_pick:6.84", "url": "B_combo_network_Beamsaw_Prospector"}, {"color": "#97c2fc", "id": "Faller\u0027s Faithful", "image": "img/Faller\u0027s_Faithful.png", "label": "Faller\u0027s Faithful", "shape": "image", "title": "GIHWR:57.9, avg_pick:4.28", "url": "B_combo_network_Faller\u0027s_Faithful"}, {"color": "#97c2fc", "id": "Monoist Circuit-Feeder", "image": "img/Monoist_Circuit-Feeder.png", "label": "Monoist Circuit-Feeder", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.51", "url": "B_combo_network_Monoist_Circuit-Feeder"}, {"color": "#97c2fc", "id": "Temporal Intervention", "image": "img/Temporal_Intervention.png", "label": "Temporal Intervention", "shape": "image", "title": "GIHWR:50.6, avg_pick:11.63", "url": "B_combo_network_Temporal_Intervention"}, {"color": "#97c2fc", "id": "Embrace Oblivion", "image": "img/Embrace_Oblivion.png", "label": "Embrace Oblivion", "shape": "image", "title": "GIHWR:55.4, avg_pick:7.19", "url": "B_combo_network_Embrace_Oblivion"}, {"color": "#97c2fc", "id": "Blade of the Swarm", "image": "img/Blade_of_the_Swarm.png", "label": "Blade of the Swarm", "shape": "image", "title": "GIHWR:52.7, avg_pick:9.55", "url": "B_combo_network_Blade_of_the_Swarm"}, {"color": "#97c2fc", "id": "Gravkill", "image": "img/Gravkill.png", "label": "Gravkill", "shape": "image", "title": "GIHWR:56.1, avg_pick:3.92", "url": "B_combo_network_Gravkill"}, {"color": "#97c2fc", "id": "Perigee Beckoner", "image": "img/Perigee_Beckoner.png", "label": "Perigee Beckoner", "shape": "image", "title": "GIHWR:56.6, avg_pick:7.99", "url": "B_combo_network_Perigee_Beckoner"}, {"color": "#97c2fc", "id": "Comet Crawler", "image": "img/Comet_Crawler.png", "label": "Comet Crawler", "shape": "image", "title": "GIHWR:53.7, avg_pick:9.91", "url": "B_combo_network_Comet_Crawler"}, {"color": "#97c2fc", "id": "Fell Gravship", "image": "img/Fell_Gravship.png", "label": "Fell Gravship", "shape": "image", "title": "GIHWR:59.9, avg_pick:4.13", "url": "B_combo_network_Fell_Gravship"}, {"color": "#97c2fc", "id": "Gravpack Monoist", "image": "img/Gravpack_Monoist.png", "label": "Gravpack Monoist", "shape": "image", "title": "GIHWR:56.8, avg_pick:6.73", "url": "B_combo_network_Gravpack_Monoist"}, {"color": "#97c2fc", "id": "Depressurize", "image": "img/Depressurize.png", "label": "Depressurize", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.63", "url": "B_combo_network_Depressurize"}, {"color": "#97c2fc", "id": "Gravblade Heavy", "image": "img/Gravblade_Heavy.png", "label": "Gravblade Heavy", "shape": "image", "title": "GIHWR:50.3, avg_pick:11.07", "url": "B_combo_network_Gravblade_Heavy"}, {"color": "#97c2fc", "id": "Hullcarver", "image": "img/Hullcarver.png", "label": "Hullcarver", "shape": "image", "title": "GIHWR:55.6, avg_pick:7.87", "url": "B_combo_network_Hullcarver"}, {"color": "#97c2fc", "id": "Lightless Evangel", "image": "img/Lightless_Evangel.png", "label": "Lightless Evangel", "shape": "image", "title": "GIHWR:53.9, avg_pick:5.83", "url": "B_combo_network_Lightless_Evangel"}, {"color": "#97c2fc", "id": "Susurian Dirgecraft", "image": "img/Susurian_Dirgecraft.png", "label": "Susurian Dirgecraft", "shape": "image", "title": "GIHWR:54.1, avg_pick:5.61", "url": "B_combo_network_Susurian_Dirgecraft"}, {"color": "#97c2fc", "id": "Susurian Voidborn", "image": "img/Susurian_Voidborn.png", "label": "Susurian Voidborn", "shape": "image", "title": "GIHWR:55.5, avg_pick:4.85", "url": "B_combo_network_Susurian_Voidborn"}, {"color": "#97c2fc", "id": "Swarm Culler", "image": "img/Swarm_Culler.png", "label": "Swarm Culler", "shape": "image", "title": "GIHWR:52.4, avg_pick:8.94", "url": "B_combo_network_Swarm_Culler"}, {"color": "#97c2fc", "id": "Timeline Culler", "image": "img/Timeline_Culler.png", "label": "Timeline Culler", "shape": "image", "title": "GIHWR:56.3, avg_pick:5.69", "url": "B_combo_network_Timeline_Culler"}, {"color": "#97c2fc", "id": "Tragic Trajectory", "image": "img/Tragic_Trajectory.png", "label": "Tragic Trajectory", "shape": "image", "title": "GIHWR:57.2, avg_pick:3.32", "url": "B_combo_network_Tragic_Trajectory"}, {"color": "#97c2fc", "id": "Virus Beetle", "image": "img/Virus_Beetle.png", "label": "Virus Beetle", "shape": "image", "title": "GIHWR:57.0, avg_pick:5.52", "url": "B_combo_network_Virus_Beetle"}, {"color": "#97c2fc", "id": "Voidforged Titan", "image": "img/Voidforged_Titan.png", "label": "Voidforged Titan", "shape": "image", "title": "GIHWR:53.2, avg_pick:4.83", "url": "B_combo_network_Voidforged_Titan"}, {"color": "#97c2fc", "id": "Vote Out", "image": "img/Vote_Out.png", "label": "Vote Out", "shape": "image", "title": "GIHWR:56.0, avg_pick:3.54", "url": "B_combo_network_Vote_Out"}, {"color": "#97c2fc", "id": "Monoist Sentry", "image": "img/Monoist_Sentry.png", "label": "Monoist Sentry", "shape": "image", "title": "GIHWR:53.0, avg_pick:7.93", "url": "B_combo_network_Monoist_Sentry"}, {"color": "#97c2fc", "id": "Scrounge for Eternity", "image": "img/Scrounge_for_Eternity.png", "label": "Scrounge for Eternity", "shape": "image", "title": "GIHWR:49.5, avg_pick:8.23", "url": "B_combo_network_Scrounge_for_Eternity"}, {"color": "#97c2fc", "id": "Hylderblade", "image": "img/Hylderblade.png", "label": "Hylderblade", "shape": "image", "title": "GIHWR:54.2, avg_pick:7.21", "url": "B_combo_network_Hylderblade"}, {"color": "#97c2fc", "id": "Umbral Collar Zealot", "image": "img/Umbral_Collar_Zealot.png", "label": "Umbral Collar Zealot", "shape": "image", "title": "GIHWR:57.2, avg_pick:4.02", "url": "B_combo_network_Umbral_Collar_Zealot"}]);
+                  edges = new vis.DataSet([{"from": "Dubious Delicacy", "label": "4.08", "title": "combo_ct:5730, comboWR:61.83, combo+-:4.08, AB_AveWR:57.75", "to": "Beamsaw Prospector", "value": 4.08}, {"from": "Dubious Delicacy", "label": "3.38", "title": "combo_ct:1870, comboWR:60.48, combo+-:3.38, AB_AveWR:57.1", "to": "Comet Crawler", "value": 3.38}, {"from": "Dubious Delicacy", "label": "4.37", "title": "combo_ct:6289, comboWR:62.92, combo+-:4.37, AB_AveWR:58.55", "to": "Depressurize", "value": 4.37}, {"from": "Dubious Delicacy", "label": "3.72", "title": "combo_ct:4795, comboWR:61.67, combo+-:3.72, AB_AveWR:57.95", "to": "Embrace Oblivion", "value": 3.72}, {"from": "Dubious Delicacy", "label": "4.58", "title": "combo_ct:3037, comboWR:63.78, combo+-:4.58, AB_AveWR:59.2", "to": "Faller\u0027s Faithful", "value": 4.58}, {"from": "Dubious Delicacy", "label": "4.04", "title": "combo_ct:3040, comboWR:64.24, combo+-:4.04, AB_AveWR:60.2", "to": "Fell Gravship", "value": 4.04}, {"from": "Dubious Delicacy", "label": "4.23", "title": "combo_ct:758, comboWR:59.63, combo+-:4.23, AB_AveWR:55.4", "to": "Gravblade Heavy", "value": 4.23}, {"from": "Dubious Delicacy", "label": "4.47", "title": "combo_ct:5834, comboWR:62.77, combo+-:4.47, AB_AveWR:58.3", "to": "Gravkill", "value": 4.47}, {"from": "Dubious Delicacy", "label": "3.96", "title": "combo_ct:5603, comboWR:62.61, combo+-:3.96, AB_AveWR:58.65", "to": "Gravpack Monoist", "value": 3.96}, {"from": "Dubious Delicacy", "label": "3.22", "title": "combo_ct:4423, comboWR:61.27, combo+-:3.22, AB_AveWR:58.05", "to": "Hullcarver", "value": 3.22}, {"from": "Dubious Delicacy", "label": "3.73", "title": "combo_ct:1858, comboWR:60.93, combo+-:3.73, AB_AveWR:57.2", "to": "Lightless Evangel", "value": 3.73}, {"from": "Dubious Delicacy", "label": "6.91", "title": "combo_ct:3254, comboWR:66.56, combo+-:6.91, AB_AveWR:59.65", "to": "Monoist Circuit-Feeder", "value": 6.91}, {"from": "Dubious Delicacy", "label": "3.99", "title": "combo_ct:4159, comboWR:62.54, combo+-:3.99, AB_AveWR:58.55", "to": "Perigee Beckoner", "value": 3.99}, {"from": "Dubious Delicacy", "label": "5.15", "title": "combo_ct:1619, comboWR:62.45, combo+-:5.15, AB_AveWR:57.3", "to": "Susurian Dirgecraft", "value": 5.15}, {"from": "Dubious Delicacy", "label": "3.96", "title": "combo_ct:1877, comboWR:61.96, combo+-:3.96, AB_AveWR:58.0", "to": "Susurian Voidborn", "value": 3.96}, {"from": "Dubious Delicacy", "label": "4.42", "title": "combo_ct:3151, comboWR:60.87, combo+-:4.42, AB_AveWR:56.45", "to": "Swarm Culler", "value": 4.42}, {"from": "Dubious Delicacy", "label": "5.09", "title": "combo_ct:1783, comboWR:63.49, combo+-:5.09, AB_AveWR:58.4", "to": "Timeline Culler", "value": 5.09}, {"from": "Dubious Delicacy", "label": "4.78", "title": "combo_ct:2879, comboWR:63.63, combo+-:4.78, AB_AveWR:58.85", "to": "Tragic Trajectory", "value": 4.78}, {"from": "Dubious Delicacy", "label": "4.75", "title": "combo_ct:6836, comboWR:63.5, combo+-:4.75, AB_AveWR:58.75", "to": "Virus Beetle", "value": 4.75}, {"from": "Dubious Delicacy", "label": "3.42", "title": "combo_ct:2215, comboWR:60.27, combo+-:3.42, AB_AveWR:56.85", "to": "Voidforged Titan", "value": 3.42}, {"from": "Dubious Delicacy", "label": "3.33", "title": "combo_ct:2387, comboWR:61.58, combo+-:3.33, AB_AveWR:58.25", "to": "Vote Out", "value": 3.33}, {"from": "Beamsaw Prospector", "label": "3.68", "title": "combo_ct:5571, comboWR:60.13, combo+-:3.68, AB_AveWR:56.45", "to": "Faller\u0027s Faithful", "value": 3.68}, {"from": "Beamsaw Prospector", "label": "4.75", "title": "combo_ct:5434, comboWR:61.65, combo+-:4.75, AB_AveWR:56.9", "to": "Monoist Circuit-Feeder", "value": 4.75}, {"from": "Beamsaw Prospector", "label": "3.62", "title": "combo_ct:592, comboWR:56.42, combo+-:3.62, AB_AveWR:52.8", "to": "Temporal Intervention", "value": 3.62}, {"from": "Faller\u0027s Faithful", "label": "3.97", "title": "combo_ct:6021, comboWR:61.22, combo+-:3.97, AB_AveWR:57.25", "to": "Depressurize", "value": 3.97}, {"from": "Faller\u0027s Faithful", "label": "4.26", "title": "combo_ct:2945, comboWR:63.16, combo+-:4.26, AB_AveWR:58.9", "to": "Fell Gravship", "value": 4.26}, {"from": "Faller\u0027s Faithful", "label": "3.3", "title": "combo_ct:601, comboWR:57.4, combo+-:3.3, AB_AveWR:54.1", "to": "Gravblade Heavy", "value": 3.3}, {"from": "Faller\u0027s Faithful", "label": "3.42", "title": "combo_ct:5389, comboWR:60.42, combo+-:3.42, AB_AveWR:57.0", "to": "Gravkill", "value": 3.42}, {"from": "Faller\u0027s Faithful", "label": "3.14", "title": "combo_ct:5763, comboWR:60.49, combo+-:3.14, AB_AveWR:57.35", "to": "Gravpack Monoist", "value": 3.14}, {"from": "Faller\u0027s Faithful", "label": "4.6", "title": "combo_ct:2896, comboWR:62.95, combo+-:4.6, AB_AveWR:58.35", "to": "Monoist Circuit-Feeder", "value": 4.6}, {"from": "Faller\u0027s Faithful", "label": "3.41", "title": "combo_ct:1089, comboWR:58.86, combo+-:3.41, AB_AveWR:55.45", "to": "Monoist Sentry", "value": 3.41}, {"from": "Faller\u0027s Faithful", "label": "3.74", "title": "combo_ct:4463, comboWR:60.99, combo+-:3.74, AB_AveWR:57.25", "to": "Perigee Beckoner", "value": 3.74}, {"from": "Faller\u0027s Faithful", "label": "4.89", "title": "combo_ct:693, comboWR:58.59, combo+-:4.89, AB_AveWR:53.7", "to": "Scrounge for Eternity", "value": 4.89}, {"from": "Faller\u0027s Faithful", "label": "4.37", "title": "combo_ct:1991, comboWR:61.07, combo+-:4.37, AB_AveWR:56.7", "to": "Susurian Voidborn", "value": 4.37}, {"from": "Faller\u0027s Faithful", "label": "4.74", "title": "combo_ct:2686, comboWR:62.29, combo+-:4.74, AB_AveWR:57.55", "to": "Tragic Trajectory", "value": 4.74}, {"from": "Faller\u0027s Faithful", "label": "4.66", "title": "combo_ct:6883, comboWR:62.11, combo+-:4.66, AB_AveWR:57.45", "to": "Virus Beetle", "value": 4.66}, {"from": "Faller\u0027s Faithful", "label": "3.34", "title": "combo_ct:2097, comboWR:58.89, combo+-:3.34, AB_AveWR:55.55", "to": "Voidforged Titan", "value": 3.34}, {"from": "Monoist Circuit-Feeder", "label": "3.05", "title": "combo_ct:6112, comboWR:60.75, combo+-:3.05, AB_AveWR:57.7", "to": "Depressurize", "value": 3.05}, {"from": "Monoist Circuit-Feeder", "label": "5.6", "title": "combo_ct:2999, comboWR:64.95, combo+-:5.6, AB_AveWR:59.35", "to": "Fell Gravship", "value": 5.6}, {"from": "Monoist Circuit-Feeder", "label": "3.32", "title": "combo_ct:5572, comboWR:60.77, combo+-:3.32, AB_AveWR:57.45", "to": "Gravkill", "value": 3.32}, {"from": "Monoist Circuit-Feeder", "label": "4.54", "title": "combo_ct:5589, comboWR:62.34, combo+-:4.54, AB_AveWR:57.8", "to": "Gravpack Monoist", "value": 4.54}, {"from": "Monoist Circuit-Feeder", "label": "4.25", "title": "combo_ct:4480, comboWR:61.45, combo+-:4.25, AB_AveWR:57.2", "to": "Hullcarver", "value": 4.25}, {"from": "Monoist Circuit-Feeder", "label": "3.77", "title": "combo_ct:1277, comboWR:59.67, combo+-:3.77, AB_AveWR:55.9", "to": "Monoist Sentry", "value": 3.77}, {"from": "Monoist Circuit-Feeder", "label": "3.52", "title": "combo_ct:619, comboWR:57.67, combo+-:3.52, AB_AveWR:54.15", "to": "Scrounge for Eternity", "value": 3.52}, {"from": "Monoist Circuit-Feeder", "label": "5.04", "title": "combo_ct:1519, comboWR:61.49, combo+-:5.04, AB_AveWR:56.45", "to": "Susurian Dirgecraft", "value": 5.04}, {"from": "Monoist Circuit-Feeder", "label": "4.05", "title": "combo_ct:2775, comboWR:62.05, combo+-:4.05, AB_AveWR:58.0", "to": "Tragic Trajectory", "value": 4.05}, {"from": "Monoist Circuit-Feeder", "label": "4.66", "title": "combo_ct:7006, comboWR:62.56, combo+-:4.66, AB_AveWR:57.9", "to": "Virus Beetle", "value": 4.66}, {"from": "Monoist Circuit-Feeder", "label": "4.27", "title": "combo_ct:2280, comboWR:61.67, combo+-:4.27, AB_AveWR:57.4", "to": "Vote Out", "value": 4.27}, {"from": "Temporal Intervention", "label": "5.42", "title": "combo_ct:632, comboWR:59.02, combo+-:5.42, AB_AveWR:53.6", "to": "Depressurize", "value": 5.42}, {"from": "Temporal Intervention", "label": "5.01", "title": "combo_ct:562, comboWR:58.36, combo+-:5.01, AB_AveWR:53.35", "to": "Gravkill", "value": 5.01}, {"from": "Embrace Oblivion", "label": "3.97", "title": "combo_ct:524, comboWR:58.02, combo+-:3.97, AB_AveWR:54.05", "to": "Blade of the Swarm", "value": 3.97}, {"from": "Embrace Oblivion", "label": "5.02", "title": "combo_ct:4308, comboWR:62.67, combo+-:5.02, AB_AveWR:57.65", "to": "Fell Gravship", "value": 5.02}, {"from": "Embrace Oblivion", "label": "3.46", "title": "combo_ct:9051, comboWR:59.56, combo+-:3.46, AB_AveWR:56.1", "to": "Gravpack Monoist", "value": 3.46}, {"from": "Embrace Oblivion", "label": "4.19", "title": "combo_ct:6538, comboWR:60.19, combo+-:4.19, AB_AveWR:56.0", "to": "Perigee Beckoner", "value": 4.19}, {"from": "Blade of the Swarm", "label": "3.39", "title": "combo_ct:725, comboWR:57.79, combo+-:3.39, AB_AveWR:54.4", "to": "Gravkill", "value": 3.39}, {"from": "Blade of the Swarm", "label": "5.45", "title": "combo_ct:574, comboWR:60.1, combo+-:5.45, AB_AveWR:54.65", "to": "Perigee Beckoner", "value": 5.45}, {"from": "Gravkill", "label": "3.22", "title": "combo_ct:5258, comboWR:61.22, combo+-:3.22, AB_AveWR:58.0", "to": "Fell Gravship", "value": 3.22}, {"from": "Perigee Beckoner", "label": "3.13", "title": "combo_ct:3905, comboWR:61.38, combo+-:3.13, AB_AveWR:58.25", "to": "Fell Gravship", "value": 3.13}, {"from": "Perigee Beckoner", "label": "4.58", "title": "combo_ct:3484, comboWR:61.48, combo+-:4.58, AB_AveWR:56.9", "to": "Tragic Trajectory", "value": 4.58}, {"from": "Perigee Beckoner", "label": "3.54", "title": "combo_ct:4429, comboWR:60.44, combo+-:3.54, AB_AveWR:56.9", "to": "Umbral Collar Zealot", "value": 3.54}, {"from": "Perigee Beckoner", "label": "3.06", "title": "combo_ct:9276, comboWR:59.86, combo+-:3.06, AB_AveWR:56.8", "to": "Virus Beetle", "value": 3.06}, {"from": "Perigee Beckoner", "label": "3.94", "title": "combo_ct:3136, comboWR:60.24, combo+-:3.94, AB_AveWR:56.3", "to": "Vote Out", "value": 3.94}, {"from": "Comet Crawler", "label": "3.14", "title": "combo_ct:1575, comboWR:59.94, combo+-:3.14, AB_AveWR:56.8", "to": "Fell Gravship", "value": 3.14}, {"from": "Fell Gravship", "label": "4.78", "title": "combo_ct:5678, comboWR:63.03, combo+-:4.78, AB_AveWR:58.25", "to": "Depressurize", "value": 4.78}, {"from": "Fell Gravship", "label": "3.73", "title": "combo_ct:5264, comboWR:62.08, combo+-:3.73, AB_AveWR:58.35", "to": "Gravpack Monoist", "value": 3.73}, {"from": "Fell Gravship", "label": "5.56", "title": "combo_ct:4151, comboWR:63.31, combo+-:5.56, AB_AveWR:57.75", "to": "Hullcarver", "value": 5.56}, {"from": "Fell Gravship", "label": "4.15", "title": "combo_ct:1134, comboWR:61.2, combo+-:4.15, AB_AveWR:57.05", "to": "Hylderblade", "value": 4.15}, {"from": "Fell Gravship", "label": "3.72", "title": "combo_ct:1605, comboWR:60.62, combo+-:3.72, AB_AveWR:56.9", "to": "Lightless Evangel", "value": 3.72}, {"from": "Fell Gravship", "label": "7.13", "title": "combo_ct:1241, comboWR:63.58, combo+-:7.13, AB_AveWR:56.45", "to": "Monoist Sentry", "value": 7.13}, {"from": "Fell Gravship", "label": "3.04", "title": "combo_ct:1354, comboWR:60.04, combo+-:3.04, AB_AveWR:57.0", "to": "Susurian Dirgecraft", "value": 3.04}, {"from": "Fell Gravship", "label": "3.77", "title": "combo_ct:1731, comboWR:61.47, combo+-:3.77, AB_AveWR:57.7", "to": "Susurian Voidborn", "value": 3.77}, {"from": "Fell Gravship", "label": "4.88", "title": "combo_ct:2439, comboWR:63.43, combo+-:4.88, AB_AveWR:58.55", "to": "Tragic Trajectory", "value": 4.88}, {"from": "Fell Gravship", "label": "3.58", "title": "combo_ct:2622, comboWR:62.13, combo+-:3.58, AB_AveWR:58.55", "to": "Umbral Collar Zealot", "value": 3.58}, {"from": "Fell Gravship", "label": "3.25", "title": "combo_ct:6313, comboWR:61.7, combo+-:3.25, AB_AveWR:58.45", "to": "Virus Beetle", "value": 3.25}, {"from": "Fell Gravship", "label": "3.11", "title": "combo_ct:1812, comboWR:59.66, combo+-:3.11, AB_AveWR:56.55", "to": "Voidforged Titan", "value": 3.11}, {"from": "Susurian Dirgecraft", "label": "3.15", "title": "combo_ct:1063, comboWR:57.95, combo+-:3.15, AB_AveWR:54.8", "to": "Susurian Voidborn", "value": 3.15}, {"from": "Susurian Dirgecraft", "label": "3.64", "title": "combo_ct:1266, comboWR:58.69, combo+-:3.64, AB_AveWR:55.05", "to": "Vote Out", "value": 3.64}, {"from": "Susurian Voidborn", "label": "3.08", "title": "combo_ct:1129, comboWR:57.93, combo+-:3.08, AB_AveWR:54.85", "to": "Hylderblade", "value": 3.08}, {"from": "Swarm Culler", "label": "3.53", "title": "combo_ct:2361, comboWR:57.73, combo+-:3.53, AB_AveWR:54.2", "to": "Vote Out", "value": 3.53}, {"from": "Timeline Culler", "label": "3.92", "title": "combo_ct:1579, comboWR:60.67, combo+-:3.92, AB_AveWR:56.75", "to": "Tragic Trajectory", "value": 3.92}, {"from": "Timeline Culler", "label": "3.27", "title": "combo_ct:1390, comboWR:59.42, combo+-:3.27, AB_AveWR:56.15", "to": "Vote Out", "value": 3.27}, {"from": "Tragic Trajectory", "label": "3.41", "title": "combo_ct:964, comboWR:58.51, combo+-:3.41, AB_AveWR:55.1", "to": "Monoist Sentry", "value": 3.41}, {"from": "Vote Out", "label": "3.59", "title": "combo_ct:2160, comboWR:60.19, combo+-:3.59, AB_AveWR:56.6", "to": "Umbral Collar Zealot", "value": 3.59}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
